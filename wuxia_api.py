@@ -60,7 +60,7 @@ def _estimate_tokens(text):
     return max(1, len(text) // 4)
 
 
-def _dump_llm_call(caller, model, messages, response_text, input_tokens, output_tokens, elapsed, streamed=False):
+def _dump_llm_call(caller, model, messages, response_text, input_tokens, output_tokens, elapsed, max_tokens=0, streamed=False):
     """Write full LLM call record to disk for debugging."""
     if not _DUMP_ENABLED:
         return
@@ -72,7 +72,7 @@ def _dump_llm_call(caller, model, messages, response_text, input_tokens, output_
             "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%S"),
             "caller": caller,
             "model": model,
-            "max_tokens": max_tokens if 'max_tokens' in dir() else 0,
+            "max_tokens": max_tokens,
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
             "elapsed_s": round(elapsed, 3),
@@ -81,8 +81,6 @@ def _dump_llm_call(caller, model, messages, response_text, input_tokens, output_
             "messages": messages,
             "response_text": response_text,
         }
-        # Fix max_tokens reference
-        record["max_tokens"] = max_tokens
         path = _DUMP_DIR / f"{ts}_{uid}_{safe_caller}.json"
         path.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
@@ -210,7 +208,7 @@ def _do_call_api(config, messages, temperature, max_tokens, json_mode=False):
         if _DUMP_ENABLED:
             _dump_llm_call(caller, model, messages, response_text,
                            _estimate_tokens(str(messages)),
-                           _estimate_tokens(response_text), elapsed)
+                           _estimate_tokens(response_text), elapsed, max_tokens)
 
         return response_text
     except Exception as e:

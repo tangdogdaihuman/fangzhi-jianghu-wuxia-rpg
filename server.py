@@ -164,11 +164,29 @@ def index():
 def api_state():
     engine = get_engine()
     s = engine.state
-    realm_names = ["初入江湖","三流高手","二流高手","一流高手","宗师","大宗师","天下第一"]
-    realm_icons = ["🐾","🗡","⚔️","🛡","👨‍🦳","🌟","👑"]
+    from wuxia_constants import REALM_NAMES, REALM_ICONS
+    realm_names = REALM_NAMES
+    realm_icons = REALM_ICONS
     ri = s.realm_index
     td = engine.get_time_display()
     npcs_here = engine.get_npcs_here()
+
+    # Ensure time_display has all fields
+    if not td.get('时辰'):
+        hour = (td.get('game_time', 0) // 60) % 24
+        if 5 <= hour < 7: td['时辰'] = '卯时'
+        elif 7 <= hour < 12: td['时辰'] = '辰时'
+        elif 12 <= hour < 14: td['时辰'] = '午时'
+        elif 14 <= hour < 17: td['时辰'] = '未时'
+        elif 17 <= hour < 19: td['时辰'] = '酉时'
+        elif 19 <= hour < 22: td['时辰'] = '戌时'
+        else: td['时辰'] = '子时'
+    if not td.get('时段'):
+        td['时段'] = '白天' if 6 <= (td.get('game_time', 0) // 60) % 24 < 18 else '夜晚'
+    if not td.get('日期'):
+        td['日期'] = getattr(engine.state, 'game_day', 1)
+    if not td.get('天气'):
+        td['天气'] = '晴朗' 
     try:
         from wuxia_ai_integration import get_ai_status
         ai_status = get_ai_status()
@@ -282,7 +300,8 @@ def api_saves():
                 with open(path, "r", encoding="utf-8") as fh:
                     d = json.load(fh)
                 mt = os.path.getmtime(path)
-                realm_names = ["初入江湖","三流高手","二流高手","一流高手","宗师","大宗师","天下第一"]
+                from wuxia_constants import REALM_NAMES
+                realm_names = REALM_NAMES
                 ri = d.get("realm_index", 0)
                 slots.append({
                     "名称": f.replace(".json", ""),

@@ -10,17 +10,20 @@ var 物品面板展开 = false;
 var 已访问地点 = {};
 
 /* ========== 缓存DOM元素 ========== */
-var 地点名称元素 = document.getElementById('顶栏中段');
 var 游戏时间元素 = document.getElementById('游戏时间');
 var 游戏日期元素 = document.getElementById('游戏日期');
 var 银两元素 = document.getElementById('银两显示');
 var 铜钱元素 = document.getElementById('铜钱显示');
 var 命令输入框 = document.getElementById('命令输入框');
 var 日志区域元素 = document.getElementById('日志区域');
-var 出口区域元素 = document.getElementById('出口区域');
 var 人物列表元素 = document.getElementById('人物列表');
 var 操作栏元素 = document.getElementById('操作栏');
-var 描述区域元素 = document.getElementById('描述区域');
+var 描述标题元素 = document.getElementById('描述标题');
+var 描述时间元素 = document.getElementById('描述时间');
+var 描述天气元素 = document.getElementById('描述天气');
+var 描述文本元素 = document.getElementById('描述文本');
+var 描述介绍元素 = document.getElementById('描述介绍');
+var 出口地图元素 = document.getElementById('出口地图');
 var 地图网格元素 = document.getElementById('地图网格');
 var 技能列元素 = document.getElementById('技能列表');
 var 物品列元素 = document.getElementById('物品列表');
@@ -42,25 +45,28 @@ var 右侧铜钱元素 = document.getElementById('右侧铜钱');
 /* ========== 应用启动 ========== */
 function 初始化游戏() {
   var 遮罩 = document.getElementById('加载遮罩');
-  遮罩.style.transition = 'opacity 1s';
+  遮罩.style.transition = 'opacity 1.2s ease';
   setTimeout(function() {
     遮罩.classList.add('隐藏');
-    setTimeout(function() { 遮罩.style.display = 'none'; }, 1000);
-  }, 2200);
+    setTimeout(function() { 遮罩.style.display = 'none'; }, 1200);
+  }, 2500);
+
   刷新状态();
   刷新计时器 = setInterval(刷新状态, 4000);
   setInterval(更新时间栏, 1000);
+
   if (命令输入框) {
     命令输入框.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') { e.preventDefault(); 执行命令(); }
     });
   }
+
   document.addEventListener('keydown', function(e) {
     if (e.target === 命令输入框) return;
     if (e.key === 's' || e.key === 'S') 打开状态弹窗();
     if (e.key === 'q' || e.key === 'Q') 打开任务弹窗();
     if (e.key === 'm' || e.key === 'M') 打开地图弹窗();
-    if (e.key === 'h' || e.key === 'H') 打开帮助弹窗();
+    if (e.key === 'h' || e.key === 'H') 显示帮助面板();
     if (e.key === 'Escape') 关闭所有弹窗();
   });
 }
@@ -90,8 +96,7 @@ function 请求数据(地址, 方式, 请求体) {
 function 刷新状态() {
   请求数据('/api/状态').then(function(数据) {
     游戏状态 = 数据;
-    更新地点名称(数据);
-    更新描述信息(数据);
+    更新地点信息(数据);
     更新出口面板(数据);
     更新人物列表(数据);
     更新操作按钮(数据);
@@ -100,75 +105,69 @@ function 刷新状态() {
     更新技能数据(数据);
     更新物品数据(数据);
     更新战斗界面(数据);
+    更新地图网格();
     更新访问记录(数据);
     更新任务摘要();
   }).catch(function() {
     添加日志('连接失败，请检查服务器', '系统');
   });
 }
-
-/* ========== 各区域更新 ========== */
-function 更新地点名称(数据) {
-  var 地点名 = 数据.地点 || '未知之地';
-  var 中段 = document.getElementById('顶栏中段');
-  if (中段) {
-    中段.innerHTML = '<span class="游戏时间" id="游戏时间"></span><span class="游戏日期" id="游戏日期">第' + (数据.游戏天数 || 1) + '天</span>';
-    游戏时间元素 = document.getElementById('游戏时间');
-    游戏日期元素 = document.getElementById('游戏日期');
-  }
-}
-
-function 更新描述信息(数据) {
+/* ========== 更新地点信息 ========== */
+function 更新地点信息(数据) {
   var loc = 数据.地点 || '未知之地';
+  if (描述标题元素) 描述标题元素.textContent = '【' + loc + '】';
+
   var 时间显示 = 数据.时间显示 || {};
-  var 天气 = 时间显示.天气 || '';
-  var 时段 = 时间显示.时段 || '';
-  var 时辰 = 时间显示.时辰 || '';
-  var 日期 = 时间显示.日期 || '';
-  if (描述区域元素) {
-    描述区域元素.innerHTML =
-      '<div class="时间天气">【' + 时辰 + '】' + 时段 + ' | ' + 天气 + ' | 第' + 日期 + '天</div>' +
-      '<div class="描述标签">【' + loc + '】</div>' +
-      '<div class="描述文本">' + 获取地点描述(loc) + '</div>' +
-      '<div class="地点介绍">' + 获取地点介绍(loc) + '</div>';
+  var 时段 = 时间显示.time || '';
+  var 天气 = 时间显示.weather || '';
+  if (描述时间元素) 描述时间元素.textContent = 时段;
+  if (描述天气元素) 描述天气元素.textContent = 天气;
+
+  if (描述文本元素) {
+    描述文本元素.textContent = 获取地点描述(loc);
+  }
+  if (描述介绍元素) {
+    描述介绍元素.textContent = 获取地点介绍(loc);
   }
 }
 
 function 获取地点描述(名称) {
   var 描述表 = {
-    '平安镇': '天书大陆边陲的一座宁静小镇，远离江湖喧嚣。街道两旁是低矮的木屋，偶尔传来几声鸡鸣犬吠。镇口有一棵老槐树，树下常有人摆下棋局。',
-    '龙门客栈': '天书大陆山脚下的热闹客栈，江湖人士云集之地，消息四通八达。店内挂满了各式兵器，柜台后酒坛堆积如山。',
-    '黑风寨': '天书大陆阴森险峻的山寨，据传有高手盘踞。空气中弥漫着肃杀之气，寨墙上刻着帮派标记，隐约传来狼嚎之声。',
-    '温泉谷': '天书大陆云雾缭绕的山谷，温泉有疗伤养神之效，常有高人隐居在此。泉水散发出的暖意让人精神一振。',
-    '襄阳城': '天书大陆繁华大城，城墙高耸，武林人士聚集之地。城中人来人往，热闹非凡。',
-    '武林秘籍库': '天书大陆古老的藏书楼，据说藏着无数武功秘籍，非有缘人不得入内。书架上的灰尘很厚，似乎很久没人翻阅。',
-    '回春堂': '天书大陆飘着药香的医馆，大夫医术高明，闻名江湖。药柜上摆满了各色药材。',
-    '擂台': '天书大陆巨大的演武场，擂台上经常有高手切磋比试，是扬名立万之地。擂台的木柱上刻满了深深的剑痕。'
+    '平安镇': '天书大陆边陲的一座宁静小镇，远离江湖喧嚣。街道两旁是低矮的木屋，偶尔传来几声鸡鸣犬吠。镇口有一棵老槐树，树下常有人摆下棋局，孩童在旁嬉戏。远处可见炊烟袅袅，充满了人间烟火气。',
+    '龙门客栈': '天书大陆山脚下的热闹客栈，江湖人士云集之地，消息四通八达。店内挂满了各式兵器，柜台后酒坛堆积如山。说书人吴六正说起一段江湖传奇，引得众人喝彩。',
+    '黑风寨': '天书大陆阴森险峻的山寨，据传有高手盘踞。空气中弥漫着肃杀之气，寨墙上刻着帮派标记，隐约传来狼嚎之声。守门喽啰目光警惕，任何人都不得擅入。',
+    '温泉谷': '天书大陆云雾缭绕的山谷，温泉有疗伤养神之效，常有高人隐居在此。泉水散发出的暖意让人精神一振，谷中鸟语花香，宛如世外桃源。',
+    '襄阳城': '天书大陆繁华大城，城墙高耸，武林人士聚集之地。城中人来人往，热闹非凡。大宋英雄守城抗敌，城墙上旌旗招展，守卫森严。',
+    '武林秘籍库': '天书大陆古老的藏书楼，据说藏着无数武功秘籍，非有缘人不得入内。书架上的灰尘很厚，似乎很久没人翻阅。隐约能感觉到一股古老的气息。',
+    '回春堂': '天书大陆飘着药香的医馆，大夫医术高明，闻名江湖。药柜上摆满了各色药材，帘后传来轻微的咳嗽声。医馆的牌匾上写着「妙手回春」四个大字。',
+    '擂台': '天书大陆巨大的演武场，擂台上经常有高手切磋比试，是扬名立万之地。擂台的木柱上刻满了深深的剑痕，每一道都诉说着一段传奇。'
   };
   return 描述表[名称] || '一个神秘的地方，等待着你去探索其中的秘密。';
 }
 
 function 获取地点介绍(名称) {
   var 介绍表 = {
-    '平安镇': '传说数百年前，一位大侠在此定居，从此小镇世代习武之风盛行。',
-    '龙门客栈': '江湖人称「龙门一拜，生死与共」，是各路英雄豪杰的必经之地。',
-    '黑风寨': '寨主原是一名没落武师，因怀才不遇落草为寇。如今手下聚集了一群山贼。',
-    '温泉谷': '传闻谷中有温泉来自地下灵脉，长期浸泡可改善根骨，提升修炼速度。',
-    '襄阳城': '郭靖黄蓉夫妇镇守此城数十载，城中高手如云，是抵御外敌的坚固屏障。',
-    '武林秘籍库': '藏书楼主人身份成谜，但有缘者可得传武功秘籍。',
-    '回春堂': '堂主师承医仙一脉，一手医术出神入化，据说能肉白骨、活死人。',
-    '擂台': '每月十五举办武林大会，胜者可获「武林盟主」称号，获得丰厚的奖励与声望。'
+    '平安镇': '传说数百年前，一位大侠在此定居，从此小镇世代习武之风盛行。镇中有武馆、医馆、客栈，应有尽有。',
+    '龙门客栈': '江湖人称「龙门一拜，生死与共」，是各路英雄豪杰的必经之地。客栈老板娘美艳动人，却没人知道她的真实来历。',
+    '黑风寨': '寨主原是一名没落武师，因怀才不遇落草为寇。如今手下聚集了一群山贼，专门打劫过往商客。',
+    '温泉谷': '传闻谷中有温泉来自地下灵脉，长期浸泡可改善根骨，提升修炼速度。许多武林人士不惜千里而来。',
+    '襄阳城': '郭靖黄蓉夫妇镇守此城数十载，城中高手如云，是抵御外敌的坚固屏障。城中设有演武场和英雄碑。',
+    '武林秘籍库': '藏书楼主人身份成谜，但有缘者可得传武功秘籍。据说楼中有机关重重，非有缘人不得其门而入。',
+    '回春堂': '堂主师承医仙一脉，一手医术出神入化，据说能肉白骨、活死人。不过诊金昂贵，非一般人能负担。',
+    '擂台': '每月十五举办武林大会，胜者可获「武林盟主」称号。擂台上胜负一瞬间，许多人在这里一战成名，也有许多人陨落于此。'
   };
   return 介绍表[名称] || '';
 }
 
+/* ========== 出口面板 ========== */
 function 更新出口面板(数据) {
   var 连接 = 获取连接地点(数据.地点);
-  if (!出口区域元素) return;
+  if (!出口地图元素) return;
   if (!连接 || Object.keys(连接).length === 0) {
-    出口区域元素.innerHTML = '<div class="出口标题">此地暂无通路</div>';
+    出口地图元素.innerHTML = '<div class="出口标题" style="padding:16px 0;">此地暂无通路</div>';
     return;
   }
+
   var html = '';
   // 上行
   html += '<div class="出口行">';
@@ -204,7 +203,8 @@ function 更新出口面板(数据) {
   }
   html += '<div class="出口占位"></div>';
   html += '</div>';
-  出口区域元素.innerHTML = html;
+
+  出口地图元素.innerHTML = html;
 }
 
 function 获取连接地点(当前) {
@@ -221,6 +221,7 @@ function 获取连接地点(当前) {
   return 地图[当前] || {};
 }
 
+/* ========== 人物列表 ========== */
 function 更新人物列表(数据) {
   if (!人物列表元素) return;
   var 人物 = 数据.人物列表 || [];
@@ -244,23 +245,24 @@ function 更新人物列表(数据) {
   人物列表元素.innerHTML = html;
 }
 
+/* ========== 操作按钮 ========== */
 function 更新操作按钮(数据) {
   if (!操作栏元素) return;
   var 在战斗中 = 数据.战斗状态 && 数据.战斗状态.在战斗中;
   if (在战斗中) {
     操作栏元素.innerHTML =
-      '<button class="操作按钮" onclick="战斗动作(\'攻击\')">⚔ 攻击</button>' +
-      '<button class="操作按钮" onclick="战斗动作(\'防御\')">🛡 防御</button>' +
-      '<button class="操作按钮" onclick="切换技能面板()">✨ 技能</button>' +
-      '<button class="操作按钮" onclick="切换物品面板()">🎒 物品</button>' +
-      '<button class="操作按钮 危险" onclick="战斗动作(\'逃跑\')">🏃 逃跑</button>';
+      '<button class="操作按钮" onclick="战斗动作(\'攻击\')"><span class="操作图标">⚔</span>攻击</button>' +
+      '<button class="操作按钮" onclick="战斗动作(\'防御\')"><span class="操作图标">🛡</span>防御</button>' +
+      '<button class="操作按钮" onclick="切换技能面板()"><span class="操作图标">✨</span>技能</button>' +
+      '<button class="操作按钮" onclick="切换物品面板()"><span class="操作图标">🎒</span>物品</button>' +
+      '<button class="操作按钮 危险" onclick="战斗动作(\'逃跑\')"><span class="操作图标">🏃</span>逃跑</button>';
   } else {
     操作栏元素.innerHTML =
-      '<button class="操作按钮" onclick="执行操作(\'观察\')">👁 观察</button>' +
-      '<button class="操作按钮" onclick="执行操作(\'休息\')">💤 休息</button>' +
-      '<button class="操作按钮" onclick="执行操作(\'练功\')">⚡ 练功</button>' +
-      '<button class="操作按钮" onclick="执行操作(\'突破\')">💫 突破</button>' +
-      '<button class="操作按钮 主要" onclick="执行操作(\'战斗\')">⚔ 战斗</button>';
+      '<button class="操作按钮" onclick="执行操作(\'观察\')"><span class="操作图标">👁</span>观察</button>' +
+      '<button class="操作按钮" onclick="执行操作(\'休息\')"><span class="操作图标">💤</span>休息</button>' +
+      '<button class="操作按钮" onclick="执行操作(\'练功\')"><span class="操作图标">⚡</span>练功</button>' +
+      '<button class="操作按钮" onclick="执行操作(\'突破\')"><span class="操作图标">💫</span>突破</button>' +
+      '<button class="操作按钮 主要" onclick="执行操作(\'战斗\')"><span class="操作图标">⚔</span>战斗</button>';
   }
   if (!在战斗中) {
     隐藏技能面板();
@@ -268,42 +270,49 @@ function 更新操作按钮(数据) {
   }
 }
 
+/* ========== 顶部信息 ========== */
 function 更新顶部信息(数据) {
   var 时间显示 = 数据.时间显示 || {};
   var 时辰 = 时间显示.时辰 || '';
   var 时段 = 时间显示.时段 || '';
   if (游戏时间元素) 游戏时间元素.textContent = '【' + 时辰 + '】' + 时段;
-  if (游戏日期元素) 游戏日期元素.textContent = '第' + (时间显示.日期 || 1) + '天';
-  if (银两元素) 银两元素.textContent = (数据.银两 || 0) + ' 两';
-  if (铜钱元素) 铜钱元素.textContent = (数据.铜钱 || 0) + ' 文';
+  if (游戏日期元素) 游戏日期元素.textContent = '第' + (时间显示.day || 1) + '天';
+  if (银两元素) 银两元素.textContent = (数据.银两 || 0);
+  if (铜钱元素) 铜钱元素.textContent = (数据.铜钱 || 0);
 }
 
 function 更新时间栏() {
   if (!游戏状态 || !游戏状态.时间显示) return;
   var 时间显示 = 游戏状态.时间显示;
-  if (游戏时间元素) 游戏时间元素.textContent = '【' + (时间显示.时辰 || '') + '】' + (时间显示.时段 || '');
+  if (游戏时间元素) 游戏时间元素.textContent = 时间显示.time || '';
 }
 
+/* ========== 右侧状态 ========== */
 function 更新右侧状态(数据) {
   var 境界名称 = ['初入江湖','三流高手','二流高手','一流高手','宗师','大宗师','天下第一'];
   var 境界图标 = ['🐾','🗡','⚔','🛡','👨‍🦳','🌟','👑'];
   var 境界索引 = 数据.境界 ? (数据.境界.索引 || 0) : 0;
   if (境界图标元素) 境界图标元素.textContent = 境界图标[境界索引];
   if (境界名称元素) 境界名称元素.textContent = 境界名称[境界索引];
+
   var 生命比 = 数据.最大生命 ? Math.round((数据.生命 / 数据.最大生命) * 100) : 0;
   var 真气比 = 数据.最大生命 ? Math.round((数据.真气 / 数据.最大生命) * 100) : 0;
+
   if (右侧血条元素) {
     右侧血条元素.style.width = 生命比 + '%';
     右侧血条元素.className = '进度条填充 生命' + (生命比 < 30 ? ' 危险' : '');
   }
   if (右侧生命元素) 右侧生命元素.textContent = 数据.生命 + '/' + 数据.最大生命;
-  if (右侧真气条元素) 右侧真气条元素.style.width = 真气比 + '%';
+  if (右侧真气条元素) {
+    右侧真气条元素.style.width = 真气比 + '%';
+  }
   if (右侧真气元素) 右侧真气元素.textContent = 数据.真气;
   if (右侧攻击元素) 右侧攻击元素.textContent = 数据.攻击;
   if (右侧防御元素) 右侧防御元素.textContent = 数据.防御;
   if (右侧银两元素) 右侧银两元素.textContent = (数据.银两 || 0) + ' 两';
   if (右侧铜钱元素) 右侧铜钱元素.textContent = (数据.铜钱 || 0) + ' 文';
 }
+
 /* ========== 技能与物品 ========== */
 function 更新技能数据(数据) {
   if (!技能列元素) return;
@@ -375,13 +384,13 @@ function 隐藏技能面板() {
 function 切换物品面板() {
   if (!物品面板元素) return;
   物品面板展开 = !物品面板展开;
-  if (物品面板展开) 物品面板元素.style.display = 'block';
+  if (物品面板展开) 物品面板元素.classList.add('激活');
   else 隐藏物品面板();
 }
 
 function 隐藏物品面板() {
   物品面板展开 = false;
-  if (物品面板元素) 物品面板元素.style.display = 'none';
+  if (物品面板元素) 物品面板元素.classList.remove('激活');
 }
 
 /* ========== 战斗面板 ========== */
@@ -389,7 +398,7 @@ function 更新战斗界面(数据) {
   if (!战斗面板元素) return;
   var 战斗中 = 数据.战斗状态 && 数据.战斗状态.在战斗中;
   if (战斗中) {
-    战斗面板元素.style.display = 'block';
+    战斗面板元素.classList.add('激活');
     var 战斗 = 数据.战斗状态;
     var 敌方名称 = 战斗.敌方名称 || '神秘敌人';
     var 敌方等级 = 战斗.敌方等级 || '?';
@@ -403,21 +412,28 @@ function 更新战斗界面(数据) {
     var 我方生命比 = Math.max(0, Math.round((我方生命 / 我方最大生命) * 100));
     var 敌方真气比 = Math.min(100, Math.round((敌方真气 / 敌方最大生命) * 100));
     var 我方真气比 = Math.min(100, Math.round((我方真气 / 我方最大生命) * 100));
+
     var el;
     el = document.getElementById('敌方名称'); if (el) el.textContent = '⚔ ' + 敌方名称 + ' (Lv.' + 敌方等级 + ')';
     el = document.getElementById('我方名称'); if (el) el.textContent = '🗡 我方';
+    el = document.getElementById('敌方等级'); if (el) el.textContent = 敌方等级;
     el = document.getElementById('敌方生命值'); if (el) el.textContent = 敌方生命 + ' / ' + 敌方最大生命;
     el = document.getElementById('我方生命值'); if (el) el.textContent = 我方生命 + ' / ' + 我方最大生命;
     el = document.getElementById('敌方真气值'); if (el) el.textContent = 敌方真气;
     el = document.getElementById('我方真气值'); if (el) el.textContent = 我方真气;
-    el = document.getElementById('敌方攻击'); if (el) el.textContent = 战斗.敌方攻击 || '?';
-    el = document.getElementById('敌方等级'); if (el) el.textContent = 敌方等级;
-    el = document.getElementById('敌方血条'); if (el) { el.style.width = 敌方生命比 + '%'; el.className = '进度条填充 生命' + (敌方生命比 < 30 ? ' 危险' : ''); }
-    el = document.getElementById('我方血条'); if (el) { el.style.width = 我方生命比 + '%'; el.className = '进度条填充 生命' + (我方生命比 < 30 ? ' 危险' : ''); }
+
+    el = document.getElementById('敌方血条'); if (el) {
+      el.style.width = 敌方生命比 + '%';
+      el.className = '进度条填充 生命' + (敌方生命比 < 30 ? ' 危险' : '');
+    }
+    el = document.getElementById('我方血条'); if (el) {
+      el.style.width = 我方生命比 + '%';
+      el.className = '进度条填充 生命' + (我方生命比 < 30 ? ' 危险' : '');
+    }
     el = document.getElementById('敌方真气条'); if (el) el.style.width = 敌方真气比 + '%';
     el = document.getElementById('我方真气条'); if (el) el.style.width = 我方真气比 + '%';
   } else {
-    战斗面板元素.style.display = 'none';
+    战斗面板元素.classList.remove('激活');
   }
 }
 
@@ -481,50 +497,82 @@ function 与人物交谈(名字) {
   发送命令('与 ' + 名字 + ' 交谈');
 }
 
+/* ========== 地图网格 ========== */
+function 更新地图网格() {
+  if (!游戏状态 || !地图网格元素) return;
+  var 地点图标 = {'平安镇': '🏘', '龙门客栈': '🏮', '黑风寨': '🏔', '温泉谷': '♨', '襄阳城': '🏯', '武林秘籍库': '📚', '回春堂': '🏥', '擂台': '⚔'};
+  var 地点列表 = Object.keys(地点图标);
+  var html = '';
+  for (var i = 0; i < 地点列表.length; i++) {
+    var loc = 地点列表[i];
+    var 是否当前 = (loc === 游戏状态.地点);
+    var 是否访问 = 已访问地点[loc] || (游戏状态.已访问地点 && 游戏状态.已访问地点[loc]);
+    var cls = '地点卡片' + (是否当前 ? ' 当前' : (是否访问 ? ' 已访问' : ''));
+    html += '<div class="' + cls + '" onclick="前往地点(\'' + loc + '\')">';
+    html += '<div class="地点图标">' + 地点图标[loc] + '</div>';
+    html += '<div class="地点名称">' + loc + '</div>';
+    html += '<div class="地点状态">' + (是否当前 ? '当前位置' : (是否访问 ? '已访问' : '未探索')) + '</div>';
+    html += '</div>';
+  }
+  地图网格元素.innerHTML = html;
+}
+
+/* ========== 访问记录 ========== */
+function 更新访问记录(数据) {
+  if (数据.地点) 已访问地点[数据.地点] = true;
+  if (数据.已访问地点) {
+    var keys = Object.keys(数据.已访问地点);
+    for (var i = 0; i < keys.length; i++) 已访问地点[keys[i]] = true;
+  }
+}
+
 /* ========== 弹窗系统 ========== */
 function 打开状态弹窗() {
   请求数据('/api/状态').then(function(数据) {
-    var 境界名称 = ['初入江湖', '三流高手', '二流高手', '一流高手', '宗师', '大宗师', '天下第一'];
-    var 境界图标 = ['🐾', '🗡', '⚔', '🛡', '👨‍🦳', '🌟', '👑'];
+    var 境界名称 = ['初入江湖','三流高手','二流高手','一流高手','宗师','大宗师','天下第一'];
+    var 境界图标 = ['🐾','🗡','⚔','🛡','👨‍🦳','🌟','👑'];
     var 境界索引 = 数据.境界 ? (数据.境界.索引 || 0) : 0;
     var html = '';
-    html += '<div class="境界行">';
-    html += '<div class="境界图标">' + 境界图标[境界索引] + '</div>';
-    html += '<div class="境界名称">' + 境界名称[境界索引] + '</div>';
+    html += '<div class="状态头部">';
+    html += '<div class="状态境界图标">' + 境界图标[境界索引] + '</div>';
+    html += '<div class="状态境界名称">' + 境界名称[境界索引] + '</div>';
     html += '</div>';
+
     var 生命比 = 数据.最大生命 ? Math.round((数据.生命 / 数据.最大生命) * 100) : 0;
     var 真气比 = 数据.最大生命 ? Math.round((数据.真气 / 数据.最大生命) * 100) : 0;
-    html += '<div class="属性行"><span class="属性标签">境界</span><span class="属性值 金色">' + 境界图标[境界索引] + ' ' + 境界名称[境界索引] + '</span></div>';
-    html += '<div class="属性行"><span class="属性标签">层次</span><span class="属性值">' + (境界索引 + 1) + ' 层</span></div>';
+
     html += '<div class="进度条容器"><div class="进度条填充 生命' + (生命比 < 30 ? ' 危险' : '') + '" style="width:' + 生命比 + '%"></div></div>';
     html += '<div class="属性行"><span class="属性标签">生命</span><span class="属性值 生命">' + 数据.生命 + ' / ' + 数据.最大生命 + ' (' + 生命比 + '%)</span></div>';
     html += '<div class="进度条容器"><div class="进度条填充 真气" style="width:' + 真气比 + '%"></div></div>';
     html += '<div class="属性行"><span class="属性标签">内力</span><span class="属性值 真气">' + 数据.真气 + ' (' + 真气比 + '%)</span></div>';
-    html += '<div class="弹窗分割线"></div>';
+    html += '<div class="状态分割线"></div>';
     html += '<div class="属性行"><span class="属性标签">攻击</span><span class="属性值">' + 数据.攻击 + '</span></div>';
     html += '<div class="属性行"><span class="属性标签">防御</span><span class="属性值">' + 数据.防御 + '</span></div>';
     html += '<div class="属性行"><span class="属性标签">银两</span><span class="属性值">' + 数据.银两 + ' 两</span></div>';
     html += '<div class="属性行"><span class="属性标签">铜钱</span><span class="属性值">' + 数据.铜钱 + ' 文</span></div>';
+
     var 技能项 = 数据.技能 || {};
     var 技能键 = Object.keys(技能项);
     if (技能键.length) {
-      html += '<div class="弹窗分割线"></div>';
-      html += '<div class="属性行" style="color:#c8a45c;font-size:13px;letter-spacing:2px;">◆ 武功技能</div>';
+      html += '<div class="状态分割线"></div>';
+      html += '<div class="属性行" style="color:#c8a45c;font-size:13px;letter-spacing:2px;font-weight:600;">◆ 武功技能</div>';
       for (var i = 0; i < 技能键.length; i++) {
         html += '<div class="属性行"><span class="属性标签">' + 技能键[i] + '</span><span class="属性值">' + 技能项[技能键[i]] + ' 层</span></div>';
       }
     }
+
     var 物品项 = 数据.物品栏 || {};
     var 物品键 = Object.keys(物品项).filter(function(k) { return 物品项[k] > 0; });
     if (物品键.length) {
-      html += '<div class="弹窗分割线"></div>';
-      html += '<div class="属性行" style="color:#c8a45c;font-size:13px;letter-spacing:2px;">◆ 随身物品</div>';
+      html += '<div class="状态分割线"></div>';
+      html += '<div class="属性行" style="color:#c8a45c;font-size:13px;letter-spacing:2px;font-weight:600;">◆ 随身物品</div>';
       var 物品名映射 = {'bread': '干粮', 'heal_potion': '金疮药', 'wine': '好酒', 'sword': '铁剑', 'manual': '武功秘籍', 'pill': '丹药'};
       for (var j = 0; j < 物品键.length; j++) {
         var 显示名 = 物品名映射[物品键[j]] || 物品键[j];
         html += '<div class="属性行"><span class="属性标签">' + 显示名 + '</span><span class="属性值">×' + 物品项[物品键[j]] + '</span></div>';
       }
     }
+
     var 状态主体 = document.getElementById('状态主体');
     if (状态主体) 状态主体.innerHTML = html;
     var 状态弹窗 = document.getElementById('状态弹窗');
@@ -542,7 +590,7 @@ function 打开任务弹窗() {
     var html = '';
     var 主线 = 数据.主线任务;
     if (主线) {
-      html += '<div class="任务标签">◆ 主线任务</div>';
+      html += '<div class="任务标签"><span class="任务图标">◆</span>主线任务</div>';
       html += '<div class="任务名称">' + 主线.名称 + '</div>';
       html += '<div class="任务描述">' + 主线.描述 + '</div>';
       var 目标列表 = 主线.目标 || [];
@@ -555,14 +603,10 @@ function 打开任务弹窗() {
     var 成就列表 = 数据.成就 || [];
     if (成就列表.length) {
       html += '<div class="弹窗分割线"></div>';
-      html += '<div class="任务标签">🏆 已获成就 (' + 成就列表.length + ')</div>';
-      for (var j = 0; j < Math.min(成就列表.length, 12); j++) {
+      html += '<div class="任务标签"><span class="任务图标">🏆</span>已获成就 (' + 成就列表.length + ')</div>';
+      for (var j = 0; j < Math.min(成就列表.length, 10); j++) {
         html += '<div class="任务目标">· ' + 成就列表[j] + '</div>';
       }
-    }
-    if (数据.统计) {
-      html += '<div class="弹窗分割线"></div>';
-      html += '<div style="color:#8a7a65;font-size:12px;">完成任务: ' + (数据.统计.已完成任务 || 0) + ' | 进行中: ' + (数据.统计.进行中任务 || 0) + '</div>';
     }
     var 任务主体 = document.getElementById('任务主体');
     if (任务主体) 任务主体.innerHTML = html;
@@ -580,7 +624,7 @@ function 打开地图弹窗() {
   if (!游戏状态) return;
   var 地点图标 = {'平安镇': '🏘', '龙门客栈': '🏮', '黑风寨': '🏔', '温泉谷': '♨', '襄阳城': '🏯', '武林秘籍库': '📚', '回春堂': '🏥', '擂台': '⚔'};
   var 地点列表 = Object.keys(地点图标);
-  var html = '';
+  var html = '<div class="地图网格">';
   for (var i = 0; i < 地点列表.length; i++) {
     var loc = 地点列表[i];
     var 是否当前 = (loc === 游戏状态.地点);
@@ -589,11 +633,12 @@ function 打开地图弹窗() {
     html += '<div class="' + cls + '" onclick="前往地点(\'' + loc + '\')">';
     html += '<div class="地点图标">' + 地点图标[loc] + '</div>';
     html += '<div class="地点名称">' + loc + '</div>';
-    if (是否当前) html += '<div class="当前标识">◇ 当前位置</div>';
+    html += '<div class="地点状态">' + (是否当前 ? '◇ 当前位置' : (是否访问 ? '已访问' : '未探索')) + '</div>';
     html += '</div>';
   }
+  html += '</div>';
   var 地图主体 = document.getElementById('地图主体');
-  if (地图主体) 地图主体.innerHTML = '<div class="地图网格">' + html + '</div>';
+  if (地图主体) 地图主体.innerHTML = html;
   var 地图弹窗 = document.getElementById('地图弹窗');
   if (地图弹窗) 地图弹窗.classList.add('激活');
 }
@@ -605,30 +650,25 @@ function 隐藏地图弹窗() {
 
 function 显示帮助面板() {
   var html = '';
-  html += '<div class="帮助组"><div class="帮助组标题">📖 探索</div>';
-  html += '<div class="帮助命令"><span class="帮助命令文本">👁 观察</span><span class="帮助命令说明">查看当前地点详情</span></div>';
-  html += '<div class="帮助命令"><span class="帮助命令文本">💤 休息</span><span class="帮助命令说明">恢复生命与内力</span></div>';
-  html += '<div class="帮助命令"><span class="帮助命令文本">⚡ 练功</span><span class="帮助命令说明">修炼提升功力</span></div>';
-  html += '<div class="帮助命令"><span class="帮助命令文本">💫 突破</span><span class="帮助命令说明">尝试突破境界</span></div>';
-  html += '<div class="帮助命令"><span class="帮助命令文本">⚔ 战斗</span><span class="帮助命令说明">寻找对手切磋</span></div>';
+  html += '<div class="帮助组"><div class="帮助组标题">📖 探索与行动</div>';
+  html += '<div class="帮助命令"><span class="帮助命令文本">👁 观察</span><span class="帮助命令说明">观察当前地点的详细信息</span></div>';
+  html += '<div class="帮助命令"><span class="帮助命令文本">💤 休息</span><span class="帮助命令说明">恢复生命值与内力</span></div>';
+  html += '<div class="帮助命令"><span class="帮助命令文本">⚡ 练功</span><span class="帮助命令说明">修炼武功，提升修为</span></div>';
+  html += '<div class="帮助命令"><span class="帮助命令文本">💫 突破</span><span class="帮助命令说明">尝试突破境界瓶颈</span></div>';
+  html += '<div class="帮助命令"><span class="帮助命令文本">⚔ 战斗</span><span class="帮助命令说明">寻找对手切磋武艺</span></div>';
   html += '</div>';
-  html += '<div class="帮助组"><div class="帮助组标题">🗺 交互</div>';
+  html += '<div class="帮助组"><div class="帮助组标题">🗺 探索与交互</div>';
   html += '<div class="帮助命令"><span class="帮助命令文本">🗺 地图</span><span class="帮助命令说明">查看世界地图 [M]</span></div>';
-  html += '<div class="帮助命令"><span class="帮助命令文本">👥 人物</span><span class="帮助命令说明">查看周围人物</span></div>';
-  html += '<div class="帮助命令"><span class="帮助命令文本">🎒 背包</span><span class="帮助命令说明">查看随身物品</span></div>';
-  html += '</div>';
-  html += '<div class="帮助组"><div class="帮助组标题">💾 系统</div>';
-  html += '<div class="帮助命令"><span class="帮助命令文本">💾 保存</span><span class="帮助命令说明">保存当前进度</span></div>';
-  html += '<div class="帮助命令"><span class="帮助命令文本">📊 状态</span><span class="帮助命令说明">查看详细属性 [S]</span></div>';
-  html += '<div class="帮助命令"><span class="帮助命令文本">📋 任务</span><span class="帮助命令说明">查看江湖任务 [Q]</span></div>';
+  html += '<div class="帮助命令"><span class="帮助命令文本">👥 人物</span><span class="帮助命令说明">查看周围的人物</span></div>';
+  html += '<div class="帮助命令"><span class="帮助命令文本">💬 交谈</span><span class="帮助命令说明">与NPC交流对话</span></div>';
   html += '</div>';
   html += '<div class="帮助组"><div class="帮助组标题">⌨ 快捷键</div>';
-  html += '<div class="帮助命令"><span class="帮助命令文本">[S]</span><span class="帮助命令说明">状态面板</span></div>';
-  html += '<div class="帮助命令"><span class="帮助命令文本">[Q]</span><span class="帮助命令说明">任务面板</span></div>';
-  html += '<div class="帮助命令"><span class="帮助命令文本">[M]</span><span class="帮助命令说明">地图面板</span></div>';
-  html += '<div class="帮助命令"><span class="帮助命令文本">[H]</span><span class="帮助命令说明">帮助面板</span></div>';
+  html += '<div class="帮助命令"><span class="帮助命令文本">[S]</span><span class="帮助命令说明">打开状态面板</span></div>';
+  html += '<div class="帮助命令"><span class="帮助命令文本">[Q]</span><span class="帮助命令说明">打开任务面板</span></div>';
+  html += '<div class="帮助命令"><span class="帮助命令文本">[M]</span><span class="帮助命令说明">打开地图面板</span></div>';
+  html += '<div class="帮助命令"><span class="帮助命令文本">[H]</span><span class="帮助命令说明">打开帮助面板</span></div>';
   html += '<div class="帮助命令"><span class="帮助命令文本">[Enter]</span><span class="帮助命令说明">执行命令</span></div>';
-  html += '<div class="帮助命令"><span class="帮助命令文本">[Esc]</span><span class="帮助命令说明">关闭弹窗</span></div>';
+  html += '<div class="帮助命令"><span class="帮助命令文本">[Esc]</span><span class="帮助命令说明">关闭所有弹窗</span></div>';
   html += '</div>';
   var 帮助主体 = document.getElementById('帮助主体');
   if (帮助主体) 帮助主体.innerHTML = html;
@@ -647,7 +687,7 @@ function 更新任务摘要() {
     if (!任务摘要元素) return;
     var 主线 = 数据.主线任务;
     if (主线) {
-      var html = '<div class="任务标签">◆ 主线</div>';
+      var html = '<div class="任务标签"><span class="任务图标">◆</span>主线任务</div>';
       html += '<div class="任务名称">' + 主线.名称 + '</div>';
       html += '<div class="任务描述">' + 主线.描述 + '</div>';
       var 目标列表 = 主线.目标 || [];
@@ -659,35 +699,6 @@ function 更新任务摘要() {
       任务摘要元素.innerHTML = '<div class="无任务">暂无主线任务</div>';
     }
   }).catch(function() {});
-}
-
-/* ========== 访问记录 ========== */
-function 更新访问记录(数据) {
-  if (数据.地点) 已访问地点[数据.地点] = true;
-  if (数据.已访问地点) {
-    var keys = Object.keys(数据.已访问地点);
-    for (var i = 0; i < keys.length; i++) 已访问地点[keys[i]] = true;
-  }
-}
-
-/* ========== 地图更新 ========== */
-function 更新地图面板() {
-  if (!游戏状态 || !地图网格元素) return;
-  var 地点图标 = {'平安镇': '🏘', '龙门客栈': '🏮', '黑风寨': '🏔', '温泉谷': '♨', '襄阳城': '🏯', '武林秘籍库': '📚', '回春堂': '🏥', '擂台': '⚔'};
-  var 地点列表 = Object.keys(地点图标);
-  var html = '';
-  for (var i = 0; i < 地点列表.length; i++) {
-    var loc = 地点列表[i];
-    var 是否当前 = (loc === 游戏状态.地点);
-    var 是否访问 = 已访问地点[loc] || (游戏状态.已访问地点 && 游戏状态.已访问地点[loc]);
-    var cls = '地点卡片' + (是否当前 ? ' 当前' : (是否访问 ? ' 已访问' : ''));
-    html += '<div class="' + cls + '" onclick="前往地点(\'' + loc + '\')">';
-    html += '<div class="地点图标">' + 地点图标[loc] + '</div>';
-    html += '<div class="地点名称">' + loc + '</div>';
-    if (是否当前) html += '<div class="当前标识">◇ 当前位置</div>';
-    html += '</div>';
-  }
-  地图网格元素.innerHTML = html;
 }
 
 /* ========== 日志系统 ========== */
@@ -713,7 +724,7 @@ function 渲染日志() {
   日志区域元素.scrollTop = 日志区域元素.scrollHeight;
 }
 
-/* ========== 提示消息 ========== */
+/* ========== 通知系统 ========== */
 function 显示通知(文本, 类型) {
   var 容器 = document.getElementById('通知容器');
   if (!容器) return;

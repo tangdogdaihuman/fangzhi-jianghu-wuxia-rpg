@@ -12,34 +12,43 @@
 <div id="加载遮罩" class="加载遮罩">
   <div class="加载标题">放置江湖</div>
   <div class="加载副标题">武 侠 传</div>
-  <div class="加载条"><div class="加载条填充"></div></div>
+  <div class="加载条"></div>
 </div>
 
 <!-- ========== 主容器 ========== -->
 <div id="主容器" class="主容器">
 
-  <!-- ===== 顶部状态栏 ===== -->
+  <!-- ===== 顶部导航栏 ===== -->
   <div class="顶栏">
     <div class="顶栏左段">
-      <button class="顶栏按钮" onclick="打开存档面板()" title="存档管理">📂</button>
-      <button class="顶栏按钮" onclick="执行操作('保存')" title="快速保存">💾</button>
-      <button class="顶栏按钮" onclick="显示帮助面板()" title="帮助">❓</button>
+      <button class="顶栏按钮" onclick="打开状态弹窗()" title="状态 [S]">📊 状态</button>
+      <button class="顶栏按钮" onclick="打开任务弹窗()" title="任务 [Q]">📋 任务</button>
+      <button class="顶栏按钮" onclick="显示帮助面板()" title="帮助 [H]">❓ 帮助</button>
     </div>
-    <div class="顶栏中段">
-      <span id="游戏时间" class="游戏时间"></span>
-      <span id="游戏日期" class="游戏日期">第1天</span>
+    <div class="顶栏中段" id="顶栏中段">
+      <div class="游戏时间" id="游戏时间"></div>
+      <div class="游戏日期" id="游戏日期">第1天</div>
     </div>
     <div class="顶栏右段">
-      <span id="银两显示" class="银两">0 两</span>
-      <span id="铜钱显示" class="铜钱">0 文</span>
+      <div class="货币显示">
+        <div class="货币项">
+          <span class="货币图标">💎</span>
+          <span class="货币值" id="银两显示">0</span>
+        </div>
+        <div class="货币项">
+          <span class="货币图标">🪙</span>
+          <span class="货币值" id="铜钱显示">0</span>
+        </div>
+      </div>
+      <button class="顶栏按钮" onclick="打开存档面板()" title="存档">💾</button>
     </div>
   </div>
 
-  <!-- ===== 三栏主内容 ===== -->
-  <div id="主内容区" class="主内容">
+  <!-- ===== 主内容区 ===== -->
+  <div class="主内容">
 
-    <!-- 左侧面板 - 地图导航 -->
-    <div id="左侧面板" class="左侧面板">
+    <!-- 左侧面板 - 世界地图 -->
+    <div class="左侧面板">
       <div class="面板">
         <div class="面板头部">
           <span class="面板标题">🗺 世界地图</span>
@@ -57,43 +66,63 @@
         <div class="面板头部">
           <span class="面板标题">🚶 出口</span>
         </div>
-        <div class="出口区域" id="出口区域">
-          <div class="出口标题">加载中...</div>
+        <div class="出口区域">
+          <div class="出口标题">这里有以下几个出口：</div>
+          <div class="出口地图" id="出口地图"></div>
         </div>
       </div>
     </div>
 
     <!-- 中间面板 - 地点信息 -->
-    <div id="中间面板" class="中间面板">
+    <div class="中间面板">
       <div class="面板" style="flex:1;">
         <div class="面板头部">
           <span class="面板标题">📍 地点</span>
-          <span class="面板标签" id="地点标签"></span>
         </div>
         <div class="描述区域" id="描述区域">
-          <div class="时间天气">加载中...</div>
-          <div class="描述标签">【???】</div>
-          <div class="描述文本">正在连接江湖...</div>
+          <div class="描述头部">
+            <div class="描述标题" id="描述标题">【???】</div>
+            <div class="描述时间">
+              <div class="时间项">
+                <span class="时间图标">🕐</span>
+                <span id="描述时间">加载中...</span>
+              </div>
+              <div class="时间项">
+                <span class="时间图标">🌤</span>
+                <span id="描述天气">--</span>
+              </div>
+            </div>
+          </div>
+          <div class="描述文本" id="描述文本">正在连接江湖...</div>
+          <div class="描述介绍" id="描述介绍"></div>
         </div>
       </div>
 
       <!-- 人物列表 -->
-      <div class="面板">
-        <div class="人物区域">
-          <div class="人物头部">👥 此地人物</div>
-          <div class="人物列表" id="人物列表">
-            <span class="无人物">加载中...</span>
-          </div>
+      <div class="人物区域">
+        <div class="人物头部">👥 此地人物</div>
+        <div class="人物列表" id="人物列表">
+          <span class="无人物">加载中...</span>
         </div>
       </div>
 
       <!-- 操作栏 -->
       <div class="操作栏" id="操作栏">
-        <button class="操作按钮" onclick="执行操作('观察')">👁 观察</button>
-        <button class="操作按钮" onclick="执行操作('休息')">💤 休息</button>
-        <button class="操作按钮" onclick="执行操作('练功')">⚡ 练功</button>
-        <button class="操作按钮" onclick="执行操作('突破')">💫 突破</button>
-        <button class="操作按钮 主要" onclick="执行操作('战斗')">⚔ 战斗</button>
+        <button class="操作按钮" onclick="执行操作('观察')">
+          <span class="操作图标">👁</span>观察
+        </button>
+        <button class="操作按钮" onclick="执行操作('休息')">
+          <span class="操作图标">💤</span>休息
+        </button>
+        <button class="操作按钮" onclick="执行操作('练功')">
+          <span class="操作图标">⚡</span>练功
+        </button>
+        <button class="操作按钮" onclick="执行操作('突破')">
+          <span class="操作图标">💫</span>突破
+        </button>
+        <button class="操作按钮 主要" onclick="执行操作('战斗')">
+          <span class="操作图标">⚔</span>战斗
+        </button>
       </div>
 
       <!-- 技能面板 -->
@@ -108,8 +137,11 @@
       </div>
 
       <!-- 物品面板 -->
-      <div id="物品面板" class="物品区域" style="display:none;">
-        <div class="物品头部">🎒 随身物品</div>
+      <div id="物品面板" class="物品区域">
+        <div class="物品头部">
+          <span class="物品标题">🎒 随身物品</span>
+          <button class="物品关闭" onclick="隐藏物品面板()">✕ 关闭</button>
+        </div>
         <div class="物品列表" id="物品列表">
           <span class="无物品">背包空空如也</span>
         </div>
@@ -121,20 +153,42 @@
         <div class="战斗双方">
           <div class="战斗方">
             <div class="战斗名称 敌方" id="敌方名称">⚔ 敌人</div>
-            <div class="战斗数值">等级: <span id="敌方等级">?</span></div>
-            <div class="战斗数值" id="敌方生命值">HP: 0/100</div>
-            <div class="进度条容器"><div class="进度条填充 生命" id="敌方血条" style="width:100%"></div></div>
-            <div class="战斗数值">真气: <span id="敌方真气值">0</span></div>
-            <div class="进度条容器"><div class="进度条填充 真气" id="敌方真气条" style="width:0%"></div></div>
-            <div class="战斗数值">攻击: <span id="敌方攻击">?</span></div>
+            <div class="战斗信息">
+              <span>等级</span>
+              <span class="战斗信息值" id="敌方等级">?</span>
+            </div>
+            <div class="战斗信息">
+              <span>生命</span>
+              <span class="战斗信息值" id="敌方生命值">0/100</span>
+            </div>
+            <div class="进度条容器">
+              <div class="进度条填充 生命" id="敌方血条" style="width:100%"></div>
+            </div>
+            <div class="战斗信息">
+              <span>真气</span>
+              <span class="战斗信息值" id="敌方真气值">0</span>
+            </div>
+            <div class="进度条容器">
+              <div class="进度条填充 真气" id="敌方真气条" style="width:0%"></div>
+            </div>
           </div>
           <div class="战斗分割线"></div>
           <div class="战斗方">
             <div class="战斗名称 我方" id="我方名称">🗡 我方</div>
-            <div class="战斗数值" id="我方生命值">HP: 0/100</div>
-            <div class="进度条容器"><div class="进度条填充 生命" id="我方血条" style="width:100%"></div></div>
-            <div class="战斗数值">真气: <span id="我方真气值">0</span></div>
-            <div class="进度条容器"><div class="进度条填充 真气" id="我方真气条" style="width:0%"></div></div>
+            <div class="战斗信息">
+              <span>生命</span>
+              <span class="战斗信息值" id="我方生命值">0/100</span>
+            </div>
+            <div class="进度条容器">
+              <div class="进度条填充 生命" id="我方血条" style="width:100%"></div>
+            </div>
+            <div class="战斗信息">
+              <span>真气</span>
+              <span class="战斗信息值" id="我方真气值">0</span>
+            </div>
+            <div class="进度条容器">
+              <div class="进度条填充 真气" id="我方真气条" style="width:0%"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -149,7 +203,7 @@
     </div>
 
     <!-- 右侧面板 - 状态与任务 -->
-    <div id="右侧面板" class="右侧面板">
+    <div class="右侧面板">
       <div class="面板">
         <div class="面板头部">
           <span class="面板标题">📊 状态</span>
@@ -159,12 +213,16 @@
             <div class="境界图标" id="境界图标">🐾</div>
             <div class="境界名称" id="境界名称">初入江湖</div>
           </div>
-          <div class="进度条容器"><div class="进度条填充 生命" id="右侧血条" style="width:100%"></div></div>
+          <div class="进度条容器">
+            <div class="进度条填充 生命" id="右侧血条" style="width:100%"></div>
+          </div>
           <div class="属性行">
             <span class="属性标签">生命</span>
             <span class="属性值 生命" id="右侧生命">0/0</span>
           </div>
-          <div class="进度条容器"><div class="进度条填充 真气" id="右侧真气条" style="width:0%"></div></div>
+          <div class="进度条容器">
+            <div class="进度条填充 真气" id="右侧真气条" style="width:0%"></div>
+          </div>
           <div class="属性行">
             <span class="属性标签">内力</span>
             <span class="属性值 真气" id="右侧真气">0</span>
@@ -222,7 +280,7 @@
     <button class="弹窗关闭" onclick="隐藏状态弹窗()">✕</button>
     <div class="弹窗标题">📊 少侠状态</div>
     <div id="状态主体"></div>
-    <div style="text-align:center;margin-top:16px;">
+    <div style="text-align:center;margin-top:20px;">
       <button class="弹窗按钮" onclick="隐藏状态弹窗()">关 闭</button>
     </div>
   </div>
@@ -234,7 +292,7 @@
     <button class="弹窗关闭" onclick="隐藏任务弹窗()">✕</button>
     <div class="弹窗标题">📋 江湖任务</div>
     <div id="任务主体"></div>
-    <div style="text-align:center;margin-top:16px;">
+    <div style="text-align:center;margin-top:20px;">
       <button class="弹窗按钮" onclick="隐藏任务弹窗()">关 闭</button>
     </div>
   </div>
@@ -246,7 +304,7 @@
     <button class="弹窗关闭" onclick="隐藏地图弹窗()">✕</button>
     <div class="弹窗标题">🗺 世界地图</div>
     <div id="地图主体"></div>
-    <div style="text-align:center;margin-top:16px;">
+    <div style="text-align:center;margin-top:20px;">
       <button class="弹窗按钮" onclick="隐藏地图弹窗()">关 闭</button>
     </div>
   </div>
@@ -258,7 +316,7 @@
     <button class="弹窗关闭" onclick="隐藏帮助弹窗()">✕</button>
     <div class="弹窗标题">📖 游戏指南</div>
     <div id="帮助主体"></div>
-    <div style="text-align:center;margin-top:16px;">
+    <div style="text-align:center;margin-top:20px;">
       <button class="弹窗按钮" onclick="隐藏帮助弹窗()">关 闭</button>
     </div>
   </div>
@@ -281,6 +339,11 @@
 
 <!-- ========== 通知容器 ========== -->
 <div id="通知容器" class="通知容器"></div>
+
+<!-- ========== 快捷键提示 ========== -->
+<div class="快捷键提示">
+  <kbd>S</kbd> 状态 &nbsp;<kbd>Q</kbd> 任务 &nbsp;<kbd>M</kbd> 地图 &nbsp;<kbd>H</kbd> 帮助
+</div>
 
 <script src="/static/game.js"></script>
 </body>

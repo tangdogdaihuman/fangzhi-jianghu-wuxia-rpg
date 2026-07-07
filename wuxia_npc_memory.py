@@ -234,26 +234,22 @@ LOCATION_NPC_TEMPLATES = {
     ],
 }
 
-MAJOR_NPCS = {
-    "老拳师": {"role": "前辈高人", "personality": "仙风道骨，言语玄妙"},
-    "铁匠张伯": {"role": "铸剑师", "personality": "豪爽直率，爱喝酒"},
-    "说书人吴六": {"role": "说书人", "personality": "机灵鬼，嘴甜"},
-    "受伤镖师": {"role": "镖师", "personality": "沉默寡言，身受重伤"},
-    "小医师阿青": {"role": "医师", "personality": "温柔善良，话不多"},
-    "武痴赵猛": {"role": "武痴", "personality": "好斗，见人就想切磋"},
-    "看门老者": {"role": "守卫", "personality": "忠于职守，说话刻板"},
-    "酒楼掌柜王胖子": {"role": "商人", "personality": "圆滑世故，消息灵通"},
-    "郭靖": {"role": "大侠", "personality": "忠厚老实，侠肝义胆"},
-    "黄蓉": {"role": "女侠", "personality": "聪慧过人，古灵精怪"},
-    "乔峰": {"role": "英雄", "personality": "豪迈大气，义薄云天"},
-    "洪七公": {"role": "前辈", "personality": "贪吃好玩，豪爽不羁"},
-    "周伯通": {"role": "老顽童", "personality": "天真烂漫，好武成痴"},
-    "欧阳锋": {"role": "反派", "personality": "阴险狡诈，武功高强"},
-    "令狐冲": {"role": "剑客", "personality": "潇洒不羁，重情重义"},
-    "韦小宝": {"role": "混混", "personality": "机灵滑头，贪生怕死"},
-}
+MAJOR_NPCS = {}
+_MAJOR_NPCS_LOADED = False
 
 
+def _ensure_major_npcs_loaded():
+    """Lazy-load MAJOR_NPCS from xiuxian_world to avoid circular imports."""
+    global _MAJOR_NPCS_LOADED, MAJOR_NPCS
+    if _MAJOR_NPCS_LOADED:
+        return
+    _MAJOR_NPCS_LOADED = True
+    try:
+        from xiuxian_world import NPCS
+        for name, data in NPCS.items():
+            MAJOR_NPCS[name] = {"role": data["role"], "personality": data["personality"]}
+    except ImportError:
+        pass
 class NPCMemoryArchive:
     def __init__(self):
         self.memories = {}
@@ -275,6 +271,13 @@ class NPCMemoryArchive:
             self.memories = {}
             self.minds = {}
             self.tick_counter = 0
+
+    def reload(self):
+        """Discard in-memory state and reload from disk."""
+        self.memories = {}
+        self.minds = {}
+        self.tick_counter = 0
+        self.load()
 
     def save(self):
         try:
@@ -310,6 +313,10 @@ class NPCMemoryArchive:
             mind.created_at_tick = self.tick_counter
             self.minds[npc_id] = mind
             self.save()
+        else:
+            # Update personality if it changed (e.g., loaded from save with older data)
+            if personality and self.minds[npc_id].personality != personality:
+                self.minds[npc_id].personality = personality
         return self.minds[npc_id]
 
     def get_mind(self, npc_id):
@@ -601,6 +608,7 @@ class NPCMemoryArchive:
 
     def record_interaction(self, npc_id, interaction_text, player_action="talk",
                            player_text="", i_type="static", outcome="", rel_delta=0):
+        _ensure_major_npcs_loaded()
         if npc_id not in self.memories and npc_id not in MAJOR_NPCS:
             return
 
@@ -638,6 +646,7 @@ class NPCMemoryArchive:
             self.save()
 
     def get_npcs_at_location(self, location):
+        _ensure_major_npcs_loaded()
         result = []
         for name, data in MAJOR_NPCS.items():
             result.append({"id": name, "name": name, "type": "major",
@@ -655,6 +664,7 @@ class NPCMemoryArchive:
         return result
 
     def get_npc_context(self, npc_id):
+        _ensure_major_npcs_loaded()
         if npc_id in MAJOR_NPCS:
             return MAJOR_NPCS[npc_id]
         npc = self.memories.get(npc_id)
@@ -670,6 +680,7 @@ class NPCMemoryArchive:
         return None
 
     def get_npc_context_for_ai(self, npc_id, max_tokens=1500):
+        _ensure_major_npcs_loaded()
         if npc_id in MAJOR_NPCS:
             return MAJOR_NPCS[npc_id].get("personality", "")
         npc = self.memories.get(npc_id)

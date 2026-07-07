@@ -5,15 +5,7 @@ import json, os, sys, random
 
 COMBAT_SAVE_KEY = "combat_state"
 
-REALMS = [
-    {"name": "初入江湖", "icon": "🐾", "hp": 100, "atk": 5, "def": 2},
-    {"name": "三流高手", "icon": "🗡", "hp": 200, "atk": 12, "def": 5},
-    {"name": "二流高手", "icon": "⚔️", "hp": 500, "atk": 28, "def": 12},
-    {"name": "一流高手", "icon": "🛡", "hp": 1200, "atk": 65, "def": 28},
-    {"name": "宗师",   "icon": "👨‍🦳", "hp": 3000, "atk": 150, "def": 60},
-    {"name": "大宗师", "icon": "🌟", "hp": 8000, "atk": 350, "def": 140},
-    {"name": "天下第一", "icon": "👑", "hp": 20000,"atk": 800, "def": 320},
-]
+from wuxia_constants import REALMS
 
 SKILLS = {
     "基础剑法": {"atk_bonus": 1.0, "desc": "最基础的剑法招式", "type": "physical"},

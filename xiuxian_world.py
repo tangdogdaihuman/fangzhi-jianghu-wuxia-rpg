@@ -5,7 +5,7 @@ xiuxian_world.py - 放置江湖 · 武侠世界 核心引擎
 输出 JSON 格式的世界状态，供 AI GM 读取并驱动叙事
 """
 
-import json, time, random, math
+import json, os, time, random, math
 from datetime import datetime, timedelta
 from enum import Enum
 
@@ -13,20 +13,7 @@ from enum import Enum
 TICK_INTERVAL = 10          # 每 tick 秒数（真实秒）
 SAVE_FILE = "wuxia_save.json"
 
-LOCATIONS = [
-    "平安镇", "龙门客栈", "黑风寨", "温泉谷",
-    "襄阳城", "武林秘籍库", "回春堂", "擂台"
-]
-
-REALMS = [
-    {"name": "初入江湖", "icon": "🐾", "hp": 100,  "atk": 5,   "def": 2},
-    {"name": "三流高手", "icon": "🗡", "hp": 200,  "atk": 12,  "def": 5},
-    {"name": "二流高手", "icon": "⚔️", "hp": 500,  "atk": 28,  "def": 12},
-    {"name": "一流高手", "icon": "🛡", "hp": 1200, "atk": 65,  "def": 28},
-    {"name": "宗师",   "icon": "👨‍🦳", "hp": 3000, "atk": 150, "def": 60},
-    {"name": "大宗师", "icon": "🌟", "hp": 8000, "atk": 350, "def": 140},
-    {"name": "天下第一", "icon": "👑", "hp": 20000,"atk": 800, "def": 320},
-]
+from wuxia_constants import REALMS, LOCATIONS
 
 # ─── 工具函数 ───
 def time_str(game_time):
@@ -353,6 +340,7 @@ class GameState:
             "relationship": self.relationship,
             "flags": list(self.flags),
             "tick_count": self.tick_count,
+            "quest_stats": self.quest_stats,
             "combat_state": self.combat_state,
         }
 
@@ -363,6 +351,8 @@ class GameState:
             if k == "flags":
                 s.flags = set(v)
             elif k == "npc_states":
+                # Copy to avoid mutating caller's data
+                v = dict(v)
                 # Merge: keep saved states, add any new NPCs from current NPCS dict
                 for npc_name in NPCS:
                     if npc_name not in v:
@@ -374,9 +364,9 @@ class GameState:
 
     def save(self):
         try:
-            with open(SAVE_FILE, "w", encoding="utf-8") as f:
-                json.dump(self.to_dict(), f, ensure_ascii=False, indent=2)
-        except: pass
+            _atomic_save(SAVE_FILE, self.to_dict())
+        except Exception:
+            pass
 
     @classmethod
     def load(cls):
@@ -386,6 +376,23 @@ class GameState:
             return cls.from_dict(data)
         except:
             return cls()
+
+
+def _atomic_save(filepath, data):
+    """Save JSON atomically: write to temp file, then rename."""
+    import tempfile
+    dir_name = os.path.dirname(filepath) or "."
+    fd, tmp = tempfile.mkstemp(dir=dir_name, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, filepath)
+    except Exception:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
 
 # ─── 世界引擎 ───
 class WorldEngine:
@@ -451,18 +458,16 @@ class WorldEngine:
         hour = (self.state.game_time // 60) % 24
         for name, npc in NPCS.items():
             schedule = npc["schedule"]
-            old_loc = npc["location"]
-            new_loc = old_loc
+            new_loc = npc["location"]
             for (time_range, loc) in schedule.items():
                 start, end = map(int, time_range.split("-"))
                 if start <= hour <= end:
                     new_loc = loc
                     break
-            npc["location"] = new_loc
-            self.state.npc_states[name]["moved"] = new_loc != old_loc
-            self.state.npc_states[name]["action"] = schedule.get(
-                f"{hour}-{hour}", "闲逛中"
-            )
+            ns = self.state.npc_states.setdefault(name, {"action": "闲逛中", "moved": False})
+            ns["moved"] = (new_loc != ns.get("effective_location", new_loc))
+            ns["effective_location"] = new_loc
+            ns["action"] = schedule.get(f"{hour}-{hour}", "闲逛中")
 
         # Spawn minor NPCs for the current location
         try:
@@ -747,23 +752,16 @@ class WorldEngine:
         if npc["location"] != self.state.location:
             return {"ok": False, "msg": f"{npc_name} 不在 {self.state.location}，目前似乎在 {npc['location']}。"}
 
-        # Try AI dialogue for major NPCs
+        # Try AI dialogue for major NPCs, fallback to static
         archive.get_or_create_mind(npc_name, npc["personality"])
         ai_result = generate_npc_dialogue(npc_name)
         if ai_result and ai_result.get("type") == "ai_generated":
             dialogue = ai_result["dialogue"]
-            archive.record_interaction(npc_name, dialogue)
-            self.state.relationship[npc_name] = self.state.relationship.get(npc_name, 0) + 1
-            self.state.quest_stats["talk_count"] = self.state.quest_stats.get("talk_count", 0) + 1
-            self.state.save()
-            return {"ok": True, "type": "talk", "npc": npc_name, "role": npc["role"],
-                    "personality": npc["personality"],
-                    "dialogue": dialogue, "relationship": self.state.relationship[npc_name],
-                    "dialogue_type": "ai"}
+            dialogue_type = "ai"
+        else:
+            dialogue = random.choice(npc["dialogues"])
+            dialogue_type = "static"
 
-        # Fallback to static dialogue
-        archive.get_or_create_mind(npc_name, npc["personality"])
-        dialogue = random.choice(npc["dialogues"])
         archive.record_interaction(npc_name, dialogue)
         self.state.relationship[npc_name] = self.state.relationship.get(npc_name, 0) + 1
         self.state.quest_stats["talk_count"] = self.state.quest_stats.get("talk_count", 0) + 1
@@ -771,14 +769,15 @@ class WorldEngine:
         return {"ok": True, "type": "talk", "npc": npc_name, "role": npc["role"],
                 "personality": npc["personality"],
                 "dialogue": dialogue, "relationship": self.state.relationship[npc_name],
-                "dialogue_type": "static"}
+                "dialogue_type": dialogue_type}
 
     def get_npcs_here(self):
-        try:
-            from wuxia_npc_memory import get_archive
-            return [n["id"] for n in get_archive().get_npcs_at_location(self.state.location)]
-        except ImportError:
-            return [name for name, n in NPCS.items() if n["location"] == self.state.location]
+        effective = {}
+        for name, npc in NPCS.items():
+            ns = self.state.npc_states.get(name, {})
+            loc = ns.get("effective_location", npc["location"])
+            effective[name] = loc
+        return [name for name, loc in effective.items() if loc == self.state.location]
 
     def wait(self, hours=1):
         self.state.game_time += hours * 60
@@ -842,7 +841,7 @@ class CommandHandler:
         elif action in ("breakthrough", "bt", "突破"):
             return self.engine.breakthrough()
 
-        elif action in ("combat", "battle", "战斗", "combat"):
+        elif action in ("combat", "battle", "战斗"):
             return self.engine.start_combat()
 
         elif action in ("attack", "a", "攻击", "打"):
@@ -879,13 +878,15 @@ class CommandHandler:
                     return {"ok": False, "msg": "周围没有人可以交谈。"}
                 return {"ok": False, "msg": f"想和谁说话？这里能看到：{'、'.join(npcs)}"}
             target = parts[1]
-            # 模糊匹配
+            # 模糊匹配：优先匹配最长共同字符数
             matched = None
+            best_len = 0
             for n in NPCS:
-                if target in n or n in target:
+                common = sum(1 for c in target if c in n)
+                if common > best_len:
+                    best_len = common
                     matched = n
-                    break
-            if not matched:
+            if not matched or best_len == 0:
                 return {"ok": False, "msg": f"没有叫「{target}」的人。"}
             return self.engine.talk(matched)
 
