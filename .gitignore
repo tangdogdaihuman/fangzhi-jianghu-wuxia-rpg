@@ -15,3 +15,10 @@ saves/
 reference.jpg
 reference.png
 game_*.png
+
+# Temp/dev files
+templates/index.html.bak
+templates/test_write.txt
+write_template.py
+*.bak
+*.tmp
