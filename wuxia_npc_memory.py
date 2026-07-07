@@ -609,7 +609,25 @@ class NPCMemoryArchive:
     def record_interaction(self, npc_id, interaction_text, player_action="talk",
                            player_text="", i_type="static", outcome="", rel_delta=0):
         _ensure_major_npcs_loaded()
-        if npc_id not in self.memories and npc_id not in MAJOR_NPCS:
+        is_major = npc_id in MAJOR_NPCS
+
+        # For major NPCs, ensure a memory entry exists for tiered tracking
+        if is_major and npc_id not in self.memories:
+            self.memories[npc_id] = {
+                "type": "major",
+                "role": MAJOR_NPCS[npc_id]["role"],
+                "personality": MAJOR_NPCS[npc_id]["personality"],
+                "location": "",
+                "interactions": 0,
+                "relationship": 0,
+                "is_alive": True,
+                "health": 100,
+                "memory": [],
+                "interactions_structured": [],
+                "permanent_memory": "",
+            }
+
+        if npc_id not in self.memories:
             return
 
         tick = self.tick_counter
@@ -686,12 +704,9 @@ class NPCMemoryArchive:
         npc = self.memories.get(npc_id)
         if not npc:
             return ""
-        ctx_text, _ = self.get_npc_context_for_ai(npc_id, max_tokens)
         personality = npc.get("personality", "普通")
         relationship = npc.get("relationship", 0)
         parts = [f"性格：{personality}"]
-        if ctx_text:
-            parts.append(f"记忆：{ctx_text}")
         if relationship != 0:
             parts.append(f"好感度：{relationship}")
         return " | ".join(parts)

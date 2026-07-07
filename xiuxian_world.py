@@ -312,14 +312,13 @@ class GameState:
 
         # 初始化NPC状态
         for name in NPCS:
-            self.npc_states[name] = {"action": " idle", "mood": "normal"}
+            self.npc_states[name] = {"action": "闲逛中", "mood": "normal"}
 
         # 任务统计
         self.quest_stats = {
             "practice_count": 0, "talk_count": 0,
             "unique_locations": [], "breakthroughs": 0,
         }
-        self.combat_state = None
 
     def to_dict(self):
         return {
@@ -358,7 +357,7 @@ class GameState:
                 # Merge: keep saved states, add any new NPCs from current NPCS dict
                 for npc_name in NPCS:
                     if npc_name not in v:
-                        v[npc_name] = {"action": " idle", "mood": "normal"}
+                        v[npc_name] = {"action": "闲逛中", "mood": "normal"}
                 s.npc_states = v
             elif hasattr(s, k):
                 setattr(s, k, v)
@@ -415,7 +414,7 @@ class WorldEngine:
         }
 
     def get_npcs_here(self):
-        return [name for name, n in NPCS.items() if n["location"] == self.state.location]
+        return [name for name, n in NPCS.items() if self.state.npc_states.get(name, {}).get("effective_location", n["location"]) == self.state.location]
 
     def tick(self):
         """推进世界一刻钟"""
@@ -461,15 +460,20 @@ class WorldEngine:
         for name, npc in NPCS.items():
             schedule = npc["schedule"]
             new_loc = npc["location"]
-            for (time_range, loc) in schedule.items():
+            action = "闲逛中"
+            for (time_range, val) in schedule.items():
                 start, end = map(int, time_range.split("-"))
                 if start <= hour <= end:
-                    new_loc = loc
+                    if val in LOCATIONS:
+                        new_loc = val
+                        action = f"在{val}"
+                    else:
+                        action = val
                     break
             ns = self.state.npc_states.setdefault(name, {"action": "闲逛中", "moved": False})
             ns["moved"] = (new_loc != ns.get("effective_location", new_loc))
             ns["effective_location"] = new_loc
-            ns["action"] = schedule.get(f"{hour}-{hour}", "闲逛中")
+            ns["action"] = action
 
         # Spawn minor NPCs for the current location
         try:
@@ -562,7 +566,7 @@ class WorldEngine:
             "name": npc_name,
             "role": npc["role"],
             "personality": npc["personality"],
-            "location": npc["location"],
+            "location": mem.get("effective_location", npc["location"]),
             "relationship": rel,
             "memory": mem,
         }
@@ -659,9 +663,6 @@ class WorldEngine:
             items = {k: v for k, v in self.state.inventory.items() if v > 0 and k in ("heal_potion", "bread")}
             return {"ok": True, "type": "combat_info", "items": items}
 
-        if cs.result:
-            return {"ok": False, "msg": "战斗已经结束。"}
-
         result = execute_player_action(cs, self.state, action, skill_name)
         if not result.get("ok"):
             return result
@@ -669,12 +670,6 @@ class WorldEngine:
         self.state.combat_state = cs.to_dict()
         self.state.hp = cs.player_hp
         self.state.max_hp = cs.player_max_hp
-
-        if cs.result:
-            self.state.combat_state = None
-            self.state.save()
-            return {"ok": True, "type": "combat_end", "result": cs.result,
-                    "combat": cs.to_dict(), "log": cs.log}
 
         execute_enemy_turn(cs, self.state)
 
@@ -751,9 +746,11 @@ class WorldEngine:
                     "relationship": self.state.relationship[npc_name],
                     "dialogue_type": "static"}
 
-        # Major NPC - check location
-        if npc["location"] != self.state.location:
-            return {"ok": False, "msg": f"{npc_name} 不在 {self.state.location}，目前似乎在 {npc['location']}。"}
+        # Major NPC - check effective location (respects schedule)
+        ns = self.state.npc_states.get(npc_name, {})
+        effective_loc = ns.get("effective_location", npc["location"])
+        if effective_loc != self.state.location:
+            return {"ok": False, "msg": f"{npc_name} 不在 {self.state.location}，目前似乎在 {effective_loc}。"}
 
         # Try AI dialogue for major NPCs, fallback to static
         archive.get_or_create_mind(npc_name, npc["personality"])
@@ -775,12 +772,7 @@ class WorldEngine:
                 "dialogue_type": dialogue_type}
 
     def get_npcs_here(self):
-        effective = {}
-        for name, npc in NPCS.items():
-            ns = self.state.npc_states.get(name, {})
-            loc = ns.get("effective_location", npc["location"])
-            effective[name] = loc
-        return [name for name, loc in effective.items() if loc == self.state.location]
+        return [name for name, n in NPCS.items() if self.state.npc_states.get(name, {}).get("effective_location", n["location"]) == self.state.location]
 
     def wait(self, hours=1):
         self.state.game_time += hours * 60
@@ -1164,7 +1156,7 @@ def main():
                 break
 
             # 自动推进世界（非战斗状态下）
-            if not self.state.combat_state and cmd.strip().lower() not in ("status", "stat", "s", "help", "?", "map", "inventory", "inv", "i", "npcs", "npc"):
+            if not state.combat_state and cmd.strip().lower() not in ("status", "stat", "s", "help", "?", "map", "inventory", "inv", "i", "npcs", "npc"):
                 td2, events = engine.tick()
                 for ev in events:
                     print(format_output({"msg": ev["text"]}, td2))

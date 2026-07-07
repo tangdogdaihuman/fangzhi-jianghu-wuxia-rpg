@@ -318,7 +318,7 @@ html, body {
   transform: translate(-50%, -50%);
   z-index: 10;
   pointer-events: none;
-  transition: left 0.05s linear, top 0.05s linear;
+  /* transition removed: JS 动画逐帧设置位置，CSS transition 会造成双重动画导致卡顿 */
 }
 
 .角色动画 {

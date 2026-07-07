@@ -3,8 +3,6 @@ wuxia_combat.py - Turn-based combat system
 """
 import json, os, sys, random
 
-COMBAT_SAVE_KEY = "combat_state"
-
 from wuxia_constants import REALMS
 
 SKILLS = {
