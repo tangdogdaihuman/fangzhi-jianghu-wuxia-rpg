@@ -6,7 +6,7 @@ import json, os, sys, random
 from datetime import datetime
 
 from wuxia_api import get_config, is_api_available, call_api
-from wuxia_npc_memory import get_archive, MAJOR_NPCS
+from wuxia_npc_memory import get_archive, MAJOR_NPCS, MEMORY_TIERS
 from wuxia_ai_quests import get_system as get_quest_system, QUEST_TYPES, EVENT_TEMPLATES
 
 
@@ -52,10 +52,14 @@ def generate_npc_dialogue(npc_id, player_name="少侠", context=""):
 
     role = npc_ctx.get("role", "路人")
     personality = npc_ctx.get("personality", "普通")
-    memory_summary = ""
-    if npc_ctx.get("memory"):
-        recent = npc_ctx["memory"][-3:]
-        memory_summary = " 记忆：" + "；".join([m["text"][:30] for m in recent])
+    # Use tiered memory compression for AI context
+    archive = get_archive()
+    memory_summary = archive.get_npc_context_for_ai(npc_id, max_tokens=600)
+    if not memory_summary:
+        # Fallback to raw memory
+        if npc_ctx.get("memory"):
+            recent = npc_ctx["memory"][-3:]
+            memory_summary = "记忆：" + "；".join([m.get("text", m)[:30] for m in recent])
 
     prompt = f"你是武侠角色【{npc_id}】，身份：{role}。性格：{personality}。{memory_summary}"
     prompt += f" 现在{player_name}来找你交谈。"
@@ -69,9 +73,65 @@ def generate_npc_dialogue(npc_id, player_name="少侠", context=""):
     ]
     result = call_api(get_config(), messages, temperature=0.9, max_tokens=200)
     if result and not result.startswith("ERROR:"):
-        return {"dialogue": result.strip().strip('"').strip(), "type": "ai_generated"}
+        dialogue = result.strip().strip('"').strip()
+        # Update NPC mind with inner thoughts after dialogue
+        _update_npc_mind(npc_id, dialogue, player_name)
+        return {"dialogue": dialogue, "type": "ai_generated"}
     return None
 
+
+def _update_npc_mind(npc_id, dialogue, player_name):
+    """Update NPC mind with inner thoughts after dialogue exchange."""
+    try:
+        archive = get_archive()
+        mind = archive.get_mind(npc_id)
+        if not mind:
+            return
+        if not is_api_available(get_config()):
+            # Static fallback based on personality keywords
+            p = mind.personality
+            if any(k in p for k in ["豪爽", "侠", "忠厚"]):
+                thoughts = {"feeling": "欣慰"}
+            elif any(k in p for k in ["机灵", "滑头", "聪明"]):
+                thoughts = {"feeling": "有趣"}
+            elif any(k in p for k in ["天真", "烂漫"]):
+                thoughts = {"feeling": "开心"}
+            elif any(k in p for k in ["阴险", "狡诈"]):
+                thoughts = {"feeling": "审视"}
+            elif any(k in p for k in ["温柔", "善良"]):
+                thoughts = {"feeling": "善意"}
+            else:
+                thoughts = {"feeling": "平静"}
+            archive.update_mind_thoughts(npc_id, thoughts)
+            return
+
+        # AI-generated inner thoughts
+        mind_summary = archive.get_mind_for_prompt(npc_id)
+        prompt_lines = [
+            "你是武侠角色【" + npc_id + "】的内心独白生成器。",
+            "性格：" + mind.personality,
+        ]
+        if mind_summary:
+            prompt_lines.append("近期内心：" + mind_summary)
+        prompt_lines.append(player_name + "刚刚对你说：" + dialogue[:80])
+        prompt_lines.append("")
+        prompt_lines.append("请生成你的内心反应（30-50字），用JSON格式：")
+        prompt_lines.append('{"feeling": "当前情绪", "goal": "当前目标"}')
+        prompt = "\n".join(prompt_lines)
+        messages = [
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": "生成内心独白。"},
+        ]
+        result = call_api(get_config(), messages, temperature=0.8, max_tokens=100, json_mode=True)
+        if result and not result.startswith("ERROR:"):
+            try:
+                parsed = json.loads(result)
+                thoughts = {k: v for k, v in parsed.items() if v}
+                archive.update_mind_thoughts(npc_id, thoughts)
+            except (json.JSONDecodeError, TypeError):
+                pass
+    except Exception:
+        pass
 
 def generate_ai_quest(location, player_level, context=""):
     quest_sys = get_quest_system()

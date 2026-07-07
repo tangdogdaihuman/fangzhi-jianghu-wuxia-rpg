@@ -5,6 +5,7 @@ wuxia_ai.py - AI 叙事层（武侠版）
 """
 
 import json, subprocess, sys, os
+from wuxia_npc_memory import _estimate_tokens
 
 SAVE_FILE = "wuxia_save.json"
 
@@ -103,6 +104,68 @@ def get_state():
         context += lore.get("economy", "")[:600] + "\n"
 
     return context
+
+def get_state_for_ai(state, npc_context=None, max_context_tokens=4000):
+    """Build AI context within token budget.
+
+    Priority: core state > NPC info > memory.
+    Returns (context_string, estimated_tokens).
+    """
+    parts = []
+    budget = max_context_tokens
+
+    realm_names = ["初入江湖","三流高手","二流高手","一流高手","宗师","大宗师","天下第一"]
+    ri = state.get("realm_index", 0)
+    hp = state.get("hp", 0)
+    mhp = state.get("max_hp", 0)
+    cult = round(state.get("cultivation", 0), 1)
+    hour = (state.get("game_time", 0) // 60) % 24
+    if 5 <= hour < 7:   period = "凌晨"
+    elif 7 <= hour < 12: period = "上午"
+    elif 12 <= hour < 14: period = "正午"
+    elif 14 <= hour < 17: period = "下午"
+    elif 17 <= hour < 19: period = "傍晚"
+    elif 19 <= hour < 22: period = "夜晚"
+    else: period = "深夜"
+    day = state.get("game_day", 1)
+    season_idx = (day % 360) // 90
+    seasons = ["春", "夏", "秋", "冬"]
+    season = seasons[season_idx]
+    loc = state.get("location", "???")
+    silver = state.get('silver', 0)
+    gold = state.get('gold', 0)
+    skills = state.get('skills', {})
+    inventory = state.get('inventory', {})
+
+    core_lines = [
+        f"时间：第{day}天 {period}({hour}时) | {season}季",
+        f"地点：{loc}",
+        f"境界：{realm_names[ri]}",
+        f"生命：{hp}/{mhp} | 攻击：{state.get('atk',0)} | 防御：{state.get('defense',0)}",
+        f"武学修为：{cult} | 银两：{silver} | 铜钱：{gold}",
+        f"武功：{', '.join(f'{k}Lv{v}' for k,v in skills.items()) or '无'}",
+        f"背包：{', '.join(f'{k}x{v}' for k,v in inventory.items()) or '空'}",
+    ]
+    core = "\n".join(core_lines)
+    parts.append(core)
+    budget -= len(core) // 4
+
+    if npc_context and budget > 100:
+        npc_text = "\n当前NPC：" + str(npc_context)[:budget // 3]
+        parts.append(npc_text)
+        budget -= len(npc_text) // 4
+
+    if budget > 100:
+        npc_states = state.get("npc_states", {})
+        if npc_states:
+            mem_lines = []
+            for name, s in list(npc_states.items())[:3]:
+                mem_lines.append(f"  {name}: {s.get('action', '?')}")
+            mem_text = "\nNPC动向：\n" + "\n".join(mem_lines)
+            parts.append(mem_text[:budget // 2])
+
+    return ("\n".join(parts), _estimate_tokens("\n".join(parts)))
+
 
 def show_commands():
     return """可用命令（武侠版）：

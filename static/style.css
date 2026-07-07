@@ -1,0 +1,1364 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap');
+
+/* ========== 界面色彩体系 ========== */
+:root {
+  --bg: #0d0d0d;
+  --panel: #1a1a1a;
+  --gold: #c8a45c;
+  --gold2: #e8d5a3;
+  --text: #d4c5b0;
+  --text2: #8a7a65;
+  --border: #3a2a1a;
+  --hp: #2ecc71;
+  --mp: #3498db;
+  --btn-bg: #2a2518;
+  --btn-border: #5a4a3a;
+  --danger: #c0392b;
+  --cyan: #4ecdc4;
+  --darkred: #8b0000;
+  --darkgold: #8a6d2b;
+  --info: #7ec8e3;
+  --quest: #f39c12;
+  --dim: #5a3a1a;
+  --bar-bg: #2a2a2a;
+}
+
+/* ========== 全局重置 ========== */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: "Noto Serif SC", "微软雅黑", serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.6;
+  letter-spacing: 1px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ========== 整体布局 ========== */
+.主容器 {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+/* ========== 顶部状态栏 ========== */
+.顶栏 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background: linear-gradient(180deg, #1f1a15, #0d0d0d);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  height: 52px;
+}
+
+..顶栏左段, ..顶栏右段 {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+..顶栏中段 {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+游戏时间 {
+  color: var(--text2);
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+游戏日期 {
+  color: var(--dim);
+  font-size: 11px;
+}
+
+.顶栏按钮 {
+  color: var(--text);
+  background: none;
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 2px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.顶栏按钮:hover {
+  background: var(--btn-bg);
+}
+
+.顶栏按钮:active {
+  background: #3a3520;
+}
+
+.顶栏按钮.危险 {
+  color: var(--danger);
+  border-color: #5a2a2a;
+}
+
+..地点名称 {
+  color: var(--gold);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 8px;
+  text-shadow: 0 0 12px rgba(200,164,92,0.4);
+}
+
+/* ========== .主内容区 ========== */
+.主内容 {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  overflow: hidden;
+  height: calc(100vh - 52px - 200px);
+}
+
+/* 左侧 - 地图导航 */
+.左侧.面板 {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #11100e;
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* 中间 - 地点信息 */
+.中间.面板 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+  min-width: 400px;
+}
+
+/* 右侧 - 状态任务 */
+.右侧.面板 {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #11100e;
+  border-left: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* ========== .面板通用 ========== */
+.面板 {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+..面板头部 {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #1a1510, #11100e);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+..面板标题 {
+  color: var(--gold);
+  font-size: 13px;
+  letter-spacing: 3px;
+  font-weight: 700;
+}
+
+..面板标签 {
+  color: var(--dim);
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+
+..面板主体 {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ========== 地图.面板 ========== */
+.地图容器 {
+  flex: 1;
+  padding: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.地图网格 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.地点卡片 {
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  padding: 8px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text2);
+  cursor: pointer;
+  border-radius: 3px;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.地点卡片:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: #2f2a18;
+}
+
+.地点卡片.当前 {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(78,205,196,0.08);
+  box-shadow: 0 0 8px rgba(78,205,196,0.15);
+}
+
+.地点卡片.已访问 {
+  border-color: #3a2a1a;
+}
+
+.地点图标 {
+  font-size: 18px;
+}
+
+..地点名称 {
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.当前标识 {
+  color: var(--cyan);
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.地图图例 {
+  padding: 6px 10px;
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+}
+
+.图例项 {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--dim);
+}
+
+.图例圆 {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.图例圆.金色 { background: var(--gold); }
+.图例圆.青色 { background: var(--cyan); }
+.图例圆.灰色 { background: #333; }
+
+/* ========== 出口.面板 ========== */
+.出口区域 {
+  padding: 10px;
+}
+
+.出口标题 {
+  color: var(--dim);
+  font-size: 12px;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.出口行 {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.出口按钮 {
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  color: var(--dim);
+  padding: 7px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 2px;
+  border-radius: 3px;
+  flex: 1;
+  text-align: center;
+  transition: all 0.2s;
+  min-width: 70px;
+}
+
+.出口按钮.可用 {
+  color: var(--gold);
+  cursor: pointer;
+}
+
+.出口按钮.可用:hover {
+  background: #3a3520;
+  border-color: var(--gold);
+}
+
+.出口按钮.当前 {
+  color: var(--cyan);
+  border-color: var(--cyan);
+  background: rgba(78,205,196,0.06);
+}
+
+.出口占位 {
+  flex: 1;
+  min-width: 70px;
+}
+
+/* ========== 描述.面板 ========== */
+.描述区域 {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.描述区域::-webkit-scrollbar {
+  width: 4px;
+}
+
+.描述区域::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.描述标签 {
+  color: var(--gold);
+  font-size: 14px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.描述文本 {
+  color: var(--gold2);
+  font-size: 15px;
+  line-height: 2.2;
+  letter-spacing: 1px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.时间天气 {
+  color: var(--text2);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.地点介绍 {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.9;
+  margin-top: 14px;
+  padding: 12px;
+  background: rgba(200,164,92,0.03);
+  border-left: 3px solid var(--darkgold);
+  border-radius: 2px;
+}
+/* ========== 人物.面板 ========== */
+.人物区域 {
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.人物头部 {
+  color: var(--dim);
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+
+.人物列表 {
+  display: flex;
+  flex-direction: row;
+  gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.人物列表::-webkit-scrollbar {
+  display: none;
+}
+
+.人物按钮 {
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  color: var(--text2);
+  padding: 5px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 1px;
+  border-radius: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.人物按钮:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.人物按钮.主要 {
+  border-color: #5a4a3a;
+  color: var(--text);
+}
+
+.人物按钮.主要:hover {
+  border-color: var(--gold);
+  box-shadow: 0 0 6px rgba(200,164,92,0.15);
+}
+
+.人物名 {
+  font-size: 12px;
+}
+
+.人物标签 {
+  font-size: 9px;
+  color: var(--dim);
+}
+
+.人物关系 {
+  font-size: 9px;
+  margin-top: 1px;
+}
+
+.人物关系.友好 { color: #2ecc71; }
+.人物关系.敌对 { color: #e74c3c; }
+.人物关系.陌生 { color: var(--text2); }
+
+.无人物 {
+  color: var(--dim);
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* ========== .操作栏 ========== */
+.操作栏 {
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  gap: 5px;
+  background: #0f0e0c;
+}
+
+.操作按钮 {
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  color: var(--gold2);
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 2px;
+  border-radius: 3px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 55px;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.操作按钮:hover {
+  background: #3a3520;
+}
+
+.操作按钮:active {
+  background: #4a4528;
+  transform: scale(0.97);
+}
+
+.操作按钮.危险 {
+  color: var(--danger);
+  border-color: #5a2a2a;
+}
+
+.操作按钮.危险:hover {
+  background: rgba(192,57,43,0.15);
+}
+
+.操作按钮.主要 {
+  color: var(--cyan);
+  border-color: #3a7a7a;
+}
+
+.操作按钮.主要:hover {
+  background: rgba(78,205,196,0.12);
+}
+
+/* ========== 技能.面板 ========== */
+技能.面板 {
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  background: #0a0a08;
+  flex-shrink: 0;
+  max-height: 110px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  display: none;
+}
+
+技能.面板.激活 {
+  display: block;
+}
+
+.技能头部 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.技能标题 {
+  color: var(--gold);
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+.技能关闭 {
+  color: var(--dim);
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.技能关闭:hover {
+  color: var(--danger);
+}
+
+.技能列表 {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.技能列表::-webkit-scrollbar {
+  display: none;
+}
+
+.技能按钮 {
+  background: linear-gradient(180deg, #2a2518, #1a1510);
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 1px;
+  border-radius: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.技能按钮:hover {
+  box-shadow: 0 0 8px rgba(200,164,92,0.25);
+  background: linear-gradient(180deg, #3a3520, #2a2518);
+}
+
+.技能名 {
+  font-size: 13px;
+}
+
+.技能等 {
+  font-size: 10px;
+  color: var(--dim);
+}
+
+.无技能 {
+  color: var(--dim);
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* ========== 物品栏 ========== */
+.物品区域 {
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  max-height: 90px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  display: none;
+}
+
+.物品区域::-webkit-scrollbar {
+  width: 3px;
+}
+
+.物品区域::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.物品头部 {
+  color: var(--dim);
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+
+.物品列表 {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.物品列表::-webkit-scrollbar {
+  display: none;
+}
+
+.物品按钮 {
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  color: var(--text);
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 1px;
+  border-radius: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.物品按钮:hover {
+  border-color: var(--gold2);
+  color: var(--gold2);
+}
+
+.物品名 {
+  font-size: 12px;
+}
+
+.物品数 {
+  font-size: 10px;
+  color: var(--dim);
+}
+
+.无物品 {
+  color: var(--dim);
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* ========== 日志.面板 ========== */
+.日志区域 {
+  height: 200px;
+  padding: 10px 16px;
+  background: #0a0a0a;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 2;
+  scrollbar-width: thin;
+}
+
+.日志区域::-webkit-scrollbar {
+  width: 4px;
+}
+
+.日志区域::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+.日志区域::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.日志条目 {
+  margin-bottom: 1px;
+  display: flex;
+  gap: 8px;
+}
+
+.日志时间 {
+  color: #444;
+  flex-shrink: 0;
+  font-size: 11px;
+  margin-top: 1px;
+  white-space: nowrap;
+}
+
+.日志内容 {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.日志内容.系统 { color: #c8a45c; }
+.日志内容.战斗 { color: #e74c3c; }
+.日志内容.胜利 { color: #2ecc71; }
+.日志内容.事件 { color: #7ec8e3; }
+.日志内容.普通 { color: #8a7a65; }
+
+/* ========== .弹窗遮罩 ========== */
+.遮罩层 {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.88);
+  z-index: 1000;
+  align-items: center;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.遮罩层.激活 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.弹窗 {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 24px;
+  min-width: 400px;
+  max-width: 560px;
+  width: 90%;
+  box-shadow: 0 0 40px rgba(0,0,0,0.6);
+  margin-top: 40px;
+  margin-bottom: 40px;
+  position: relative;
+}
+
+..弹窗标题 {
+  color: var(--gold);
+  font-size: 18px;
+  text-align: center;
+  letter-spacing: 6px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+
+..弹窗关闭 {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  color: var(--dim);
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+..弹窗关闭:hover {
+  color: var(--danger);
+}
+
+..弹窗分割线 {
+  border-bottom: 1px solid var(--border);
+  margin: 10px 0;
+}
+
+..弹窗按钮 {
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  color: var(--text);
+  padding: 8px 22px;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 2px;
+  border-radius: 3px;
+  cursor: pointer;
+  margin: 3px;
+}
+
+..弹窗按钮:hover {
+  background: #3a3520;
+}
+
+/* ========== 状态.面板 ========== */
+.属性行 {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(58,42,26,0.3);
+  font-size: 13px;
+}
+
+.属性标签 {
+  color: var(--text2);
+}
+
+.属性值 {
+  color: var(--gold2);
+  font-weight: 700;
+}
+
+.属性值.金色 { color: #c8a45c; }
+.属性值.生命 { color: #2ecc71; }
+.属性值.真气 { color: #3498db; }
+.属性值.危险 { color: #e74c3c; }
+
+.境界行 {
+  padding: 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.境界图标 {
+  font-size: 24px;
+}
+
+.境界名称 {
+  color: var(--gold);
+  font-size: 14px;
+  letter-spacing: 3px;
+  margin-top: 4px;
+  font-weight: 700;
+}
+
+.进度条容器 {
+  width: 100%;
+  height: 5px;
+  background: var(--bar-bg);
+  border-radius: 3px;
+  margin-top: 3px;
+  margin-bottom: 3px;
+  overflow: hidden;
+}
+
+.进度条填充 {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.进度条填充.生命 {
+  background: linear-gradient(90deg, #2ecc71, #27ae60);
+}
+
+.进度条填充.生命.危险 {
+  background: linear-gradient(90deg, #c0392b, #e74c3c);
+}
+
+.进度条填充.真气 {
+  background: linear-gradient(90deg, #3498db, #2980b9);
+}
+
+/* ========== 任务.面板 ========== */
+.任务摘要 {
+  padding: 10px;
+}
+
+.任务标签 {
+  color: var(--quest);
+  font-size: 12px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.任务名称 {
+  color: var(--text);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.任务描述 {
+  color: var(--text2);
+  font-size: 11px;
+  line-height: 1.8;
+  margin-bottom: 4px;
+}
+
+.任务目标 {
+  color: var(--text2);
+  font-size: 11px;
+  padding: 2px 0;
+  letter-spacing: 1px;
+}
+
+.无任务 {
+  color: var(--dim);
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* ========== 战斗.面板 ========== */
+战斗.面板 {
+  padding: 12px;
+  background: rgba(192,57,43,0.05);
+  border-bottom: 1px solid rgba(192,57,43,0.3);
+  flex-shrink: 0;
+  display: none;
+}
+
+战斗.面板.激活 {
+  display: block;
+}
+
+.战斗标题 {
+  color: var(--danger);
+  font-size: 14px;
+  letter-spacing: 3px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.战斗分割线 {
+  border-bottom: 1px dashed rgba(192,57,43,0.2);
+  margin: 6px 0;
+}
+
+.战斗双方 {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.战斗方 {
+  flex: 1;
+}
+
+.战斗名称 {
+  font-size: 13px;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.战斗名称.敌方 { color: var(--danger); }
+.战斗名称.我方 { color: var(--cyan); }
+
+.战斗数值 {
+  color: var(--text2);
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+..战斗数值值 {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.战斗日志框 {
+  padding: 8px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(192,57,43,0.15);
+  border-radius: 3px;
+  max-height: 60px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.8;
+  margin-top: 8px;
+  scrollbar-width: thin;
+}
+
+.战斗日志框::-webkit-scrollbar {
+  width: 3px;
+}
+
+.战斗日志框::-webkit-scrollbar-thumb {
+  background: #5a2a2a;
+  border-radius: 2px;
+}
+
+战斗.日志条目 {
+  margin-bottom: 1px;
+}
+
+战斗.日志条目.敌方 { color: #e74c3c; }
+战斗.日志条目.我方 { color: #2ecc71; }
+战斗.日志条目.系统 { color: #c8a45c; }
+战斗.日志条目.治疗 { color: #4ecdc4; }
+
+/* ========== .输入栏 ========== */
+.输入栏 {
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  background: #0a0a0a;
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.输入提示 {
+  color: var(--gold);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.输入框 {
+  flex: 1;
+  background: #11100e;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: 1px;
+  border-radius: 3px;
+  outline: none;
+}
+
+.输入框:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 6px rgba(200,164,92,0.15);
+}
+
+.提交按钮 {
+  background: linear-gradient(180deg, #3a3520, #2a2518);
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  padding: 8px 20px;
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: 2px;
+  border-radius: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+.提交按钮:hover {
+  background: linear-gradient(180deg, #4a4528, #3a3520);
+}
+
+.快捷键提示 {
+  flex-shrink: 0;
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ========== 加载画面 ========== */
+.加载遮罩 {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #0d0d0d;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 1s;
+}
+
+.加载遮罩.隐藏 {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.加载标题 {
+  color: var(--gold);
+  font-size: 32px;
+  letter-spacing: 12px;
+  font-weight: 700;
+  text-shadow: 0 0 20px rgba(200,164,92,0.4);
+  margin-bottom: 12px;
+}
+
+.加载副标题 {
+  color: var(--dim);
+  font-size: 14px;
+  letter-spacing: 3px;
+  margin-bottom: 30px;
+}
+
+.加载条 {
+  width: 180px;
+  height: 2px;
+  background: #2a2a2a;
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+..加载条填充 {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #c8a45c, #e8d5a3);
+  border-radius: 1px;
+  animation: 加载动画 2.5s ease-in-out;
+}
+
+@keyframes 加载动画 {
+  0% { width: 0%; }
+  50% { width: 65%; }
+  100% { width: 100%; }
+}
+
+/* ========== .弹窗动画 ========== */
+@keyframes 淡入 {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes 脉冲光 {
+  0%, 100% { box-shadow: 0 0 4px rgba(200,164,92,0.2); }
+  50% { box-shadow: 0 0 14px rgba(200,164,92,0.5); }
+}
+
+.淡入 {
+  animation: 淡入 0.3s ease-out;
+}
+
+.脉冲 {
+  animation: 脉冲光 2s infinite;
+}
+
+/* ========== 存档管理 ========== */
+.存档列表 {
+  max-height: 280px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  scrollbar-width: thin;
+}
+
+.存档列表::-webkit-scrollbar {
+  width: 4px;
+}
+
+.存档列表::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.存档条目 {
+  background: #11100e;
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 3px;
+}
+
+.存档条目:hover {
+  border-color: var(--gold);
+}
+
+.存档信息 {
+  flex: 1;
+}
+
+.存档名称 {
+  color: var(--gold2);
+  font-size: 14px;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+
+.存档详情 {
+  color: var(--text2);
+  font-size: 11px;
+  display: flex;
+  gap: 12px;
+}
+
+.存档操作 {
+  display: flex;
+  gap: 5px;
+}
+
+.存档按钮 {
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  color: var(--text);
+  padding: 4px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.存档按钮:hover {
+  background: #3a3520;
+}
+
+.存档按钮.删除 {
+  color: var(--danger);
+  border-color: #5a2a2a;
+}
+
+.无存档 {
+  color: var(--dim);
+  font-size: 13px;
+  text-align: center;
+  padding: 24px;
+  font-style: italic;
+}
+
+/* ========== .通知消息 ========== */
+..通知容器 {
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 300px;
+}
+
+.通知 {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 10px 16px;
+  border-radius: 3px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  font-size: 13px;
+  animation: 淡入 0.3s ease-out;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.通知.成功 { border-color: #2ecc71; }
+.通知.危险 { border-color: #c0392b; }
+.通知.信息 { border-color: #3498db; }
+
+..通知文本 { color: var(--text); flex: 1; }
+
+..通知关闭 {
+  color: var(--dim);
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+..通知关闭:hover { color: var(--danger); }
+
+/* ========== 帮助.面板 ========== */
+.帮助内容 {
+  max-height: 500px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.帮助内容::-webkit-scrollbar {
+  width: 4px;
+}
+
+.帮助内容::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.帮助组 {
+  margin-bottom: 16px;
+}
+
+..帮助组标题 {
+  color: var(--gold);
+  font-size: 14px;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(58,42,26,0.5);
+  padding-bottom: 4px;
+}
+
+.帮助命令 {
+  padding: 4px 0;
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+}
+
+..帮助命令文本 {
+  color: var(--gold2);
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
+..帮助命令说明 {
+  color: var(--text2);
+}
+
+/* ========== .快捷键提示 ========== */
+.快捷键提示 {
+  position: fixed;
+  bottom: 12px;
+  right: 16px;
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 1px;
+  z-index: 100;
+  text-align: right;
+  line-height: 1.8;
+}
+
+.快捷键提示 kbd {
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-family: inherit;
+  font-size: 10px;
+  color: #666;
+}

@@ -15,8 +15,114 @@ def get_quest_info(state):
         return {}
 
 app = Flask(__name__)
+
+# ========== 字段名翻译映射 ==========
+响应翻译 = {
+    "hp": "生命", "max_hp": "最大生命",
+    "atk": "攻击", "defense": "防御",
+    "cultivation": "真气",
+    "silver": "银两", "gold": "铜钱",
+    "skills": "技能", "inventory": "物品栏",
+    "location": "地点", "relationship": "关系",
+    "game_day": "游戏天数",
+    "time_display": "时间显示",
+    "realm": "境界", "npcs_here": "人物列表",
+    "combat_state": "战斗状态",
+    "quest_summary": "任务摘要",
+    "flags": "标记",
+    "npc_states": "人物状态",
+    "ai_status": "人工智能状态",
+}
+
+战斗翻译 = {
+    "in_combat": "在战斗中",
+    "enemy_name": "敌方名称",
+    "enemy_level": "敌方等级",
+    "enemy_hp": "敌方生命",
+    "enemy_max_hp": "敌方最大生命",
+    "enemy_cultivation": "敌方真气",
+    "enemy_atk": "敌方攻击",
+    "player_hp": "我方生命",
+    "player_max_hp": "我方最大生命",
+    "player_cultivation": "我方真气",
+    "round": "回合",
+    "log": "日志",
+}
+
+def 翻译响应(数据):
+    if isinstance(数据, dict):
+        result = {}
+        for k, v in 数据.items():
+            new_key = 响应翻译.get(k, k)
+            if isinstance(v, dict):
+                if any(x in v for x in ["enemy_name", "enemy_hp", "player_hp", "in_combat"]):
+                    result[new_key] = 翻译战斗响应(v)
+                else:
+                    result[new_key] = 翻译响应(v)
+            elif isinstance(v, list):
+                result[new_key] = [翻译响应(item) if isinstance(item, dict) else item for item in v]
+            else:
+                result[new_key] = v
+        return result
+    elif isinstance(数据, list):
+        return [翻译响应(item) for item in 数据]
+    return 数据
+
+def 翻译战斗响应(战斗数据):
+    if not isinstance(战斗数据, dict):
+        return 战斗数据
+    result = {}
+    for k, v in 战斗数据.items():
+        new_key = 战斗翻译.get(k, k)
+        result[new_key] = 翻译响应(v) if isinstance(v, (dict, list)) else v
+    return result
+
+def 获取任务信息(state):
+    try:
+        from wuxia_integration import get_quest_summary
+        return get_quest_summary(state)
+    except ImportError:
+        return {}
 SAVES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saves")
 os.makedirs(SAVES_DIR, exist_ok=True)
+
+# ========== 静态文件路由 ==========
+# ========== 中文路由别名 ==========
+@app.route("/api/状态")
+def api_state_zh():
+    return api_state()
+
+@app.route("/api/任务")
+def api_quests_zh():
+    return api_quests()
+
+@app.route("/api/命令", methods=["POST"])
+def api_command_zh():
+    return api_command()
+
+@app.route("/api/战斗", methods=["POST"])
+def api_combat_zh():
+    return api_combat()
+
+@app.route("/api/保存", methods=["POST"])
+def api_save_zh():
+    return api_save()
+
+@app.route("/api/读取", methods=["POST"])
+def api_load_zh():
+    return api_load()
+
+@app.route("/api/删除", methods=["POST"])
+def api_delete_zh():
+    return api_delete()
+
+@app.route("/api/存档")
+def api_saves_zh():
+    return api_saves()
+
+@app.route("/api/人物")
+def api_npcs_zh():
+    return api_npcs()
 
 _state_local = threading.local()
 
@@ -68,9 +174,9 @@ def api_state():
         ai_status = get_ai_status()
     except ImportError:
         ai_status = {"available": False}
-    return jsonify({
+    raw = {
         "time_display": td,
-        "realm": {"name": realm_names[ri], "icon": realm_icons[ri]},
+        "realm": {"name": realm_names[ri], "icon": realm_icons[ri], "index": ri},
         "hp": s.hp, "max_hp": s.max_hp,
         "atk": s.atk, "defense": s.defense,
         "cultivation": round(s.cultivation, 1),
@@ -86,7 +192,9 @@ def api_state():
         "combat_state": s.combat_state,
         "quest_summary": get_quest_info(s),
         "ai_status": ai_status,
-    })
+        "visited": dict(getattr(s, 'visited_locations', {})),
+    }
+    return jsonify(翻译响应(raw))
 
 @app.route("/api/quests")
 def api_quests():
@@ -141,13 +249,28 @@ def api_command():
         if events:
             result["events"] = [{"text": ev["text"], "type": ev.get("type","world")} for ev in events]
     output = format_output(result, td)
-    return jsonify({
+    response_data = {
         "ok": result.get("ok", True),
-        "output": output,
-        "type": result.get("type", ""),
-        "events": result.get("events", []),
-        "combat_state": engine.state.combat_state,
-    })
+        "输出": output,
+        "类型": result.get("type", ""),
+    }
+    cs = engine.state.combat_state
+    if cs:
+        cs_dict = {
+            "在战斗中": getattr(cs, 'in_combat', False),
+            "敌方名称": getattr(cs, 'enemy_name', '???'),
+            "敌方等级": getattr(cs, 'enemy_level', 1),
+            "敌方生命": getattr(cs, 'enemy_hp', 0),
+            "敌方最大生命": getattr(cs, 'enemy_max_hp', 100),
+            "敌方真气": getattr(cs, 'enemy_cultivation', 0),
+            "敌方攻击": getattr(cs, 'enemy_atk', 0),
+            "我方生命": getattr(cs, 'player_hp', 0),
+            "我方最大生命": getattr(cs, 'player_max_hp', 100),
+            "我方真气": getattr(cs, 'player_cultivation', 0),
+            "回合": getattr(cs, 'round', 0),
+        }
+        response_data["战斗状态"] = cs_dict
+    return jsonify(response_data)
 
 @app.route("/api/saves", methods=["GET"])
 def api_saves():
@@ -162,53 +285,52 @@ def api_saves():
                 realm_names = ["初入江湖","三流高手","二流高手","一流高手","宗师","大宗师","天下第一"]
                 ri = d.get("realm_index", 0)
                 slots.append({
-                    "slot": f.replace(".json", ""),
-                    "location": d.get("location", "?"),
-                    "realm": realm_names[ri],
-                    "game_day": d.get("game_day", 1),
-                    "hp": d.get("hp", 0),
-                    "max_hp": d.get("max_hp", 0),
-                    "cultivation": round(d.get("cultivation", 0), 1),
-                    "updated": datetime.fromtimestamp(mt).strftime("%m-%d %H:%M"),
-                    "size": os.path.getsize(path),
+                    "名称": f.replace(".json", ""),
+                    "地点": d.get("location", "?"),
+                    "境界": realm_names[ri],
+                    "游戏天数": d.get("game_day", 1),
+                    "生命": d.get("hp", 0),
+                    "最大生命": d.get("max_hp", 0),
+                    "真气": round(d.get("cultivation", 0), 1),
+                    "更新时间": datetime.fromtimestamp(mt).strftime("%m-%d %H:%M"),
                 })
             except:
                 pass
-    slots.sort(key=lambda x: x["updated"], reverse=True)
-    return jsonify({"saves": slots})
+    slots.sort(key=lambda x: x["更新时间"], reverse=True)
+    return jsonify({"存档": slots})
 
 @app.route("/api/save", methods=["POST"])
 def api_save():
     data = request.get_json()
     slot = data.get("slot", "").strip()
     if not slot:
-        return jsonify({"ok": False, "msg": "请指定存档名"})
+        return jsonify({"成功": False, "消息": "请指定存档名"})
     safe = "".join(c for c in slot if c.isalnum() or c in "-_ ").strip() or "quick"
     path = os.path.join(SAVES_DIR, safe + ".json")
     engine = get_engine()
     engine.state.save()
     try:
         shutil.copy2("wuxia_save.json", path)
-        return jsonify({"ok": True, "msg": "已保存: " + safe, "slot": safe})
+        return jsonify({"成功": True, "消息": "已保存: " + safe, "名称": safe})
     except Exception as e:
-        return jsonify({"ok": False, "msg": str(e)})
+        return jsonify({"成功": False, "消息": str(e)})
 
 @app.route("/api/load", methods=["POST"])
 def api_load():
     data = request.get_json()
     slot = data.get("slot", "").strip()
     if not slot:
-        return jsonify({"ok": False, "msg": "请指定存档名"})
+        return jsonify({"成功": False, "消息": "请指定存档名"})
     path = os.path.join(SAVES_DIR, slot + ".json")
     if not os.path.exists(path):
-        return jsonify({"ok": False, "msg": "存档不存在: " + slot})
+        return jsonify({"成功": False, "消息": "存档不存在: " + slot})
     try:
         shutil.copy2(path, "wuxia_save.json")
         if hasattr(_state_local, "engine"):
             delattr(_state_local, "engine")
-        return jsonify({"ok": True, "msg": "已读取: " + slot})
+        return jsonify({"成功": True, "消息": "已读取: " + slot})
     except Exception as e:
-        return jsonify({"ok": False, "msg": str(e)})
+        return jsonify({"成功": False, "消息": str(e)})
 
 @app.route("/api/delete", methods=["POST"])
 def api_delete():
@@ -216,12 +338,12 @@ def api_delete():
     slot = data.get("slot", "").strip()
     path = os.path.join(SAVES_DIR, slot + ".json")
     if not os.path.exists(path):
-        return jsonify({"ok": False, "msg": "存档不存在"})
+        return jsonify({"成功": False, "消息": "存档不存在"})
     try:
         os.remove(path)
-        return jsonify({"ok": True, "msg": "已删除: " + slot})
+        return jsonify({"成功": True, "消息": "已删除: " + slot})
     except Exception as e:
-        return jsonify({"ok": False, "msg": str(e)})
+        return jsonify({"成功": False, "消息": str(e)})
 
 @app.route("/api/context")
 def api_context():

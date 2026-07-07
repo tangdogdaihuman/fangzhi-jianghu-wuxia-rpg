@@ -37,6 +37,75 @@ ENEMY_TEMPLATES = {
     "神秘高手": {"base_hp": 1200, "base_atk": 80, "base_def": 35, "realm_index": 4},
 }
 
+# ── Item combat stats ─────────────────────────────────────────
+ITEM_COMBAT_STATS = {
+    "heal_potion": {"heal": 50, "type": "consumable"},
+    "bread": {"heal": 20, "type": "consumable"},
+    "iron_sword": {"atk_bonus": 5, "type": "weapon"},
+    "steel_blade": {"atk_bonus": 12, "type": "weapon"},
+    "leather_armor": {"def_bonus": 3, "hp_bonus": 20, "type": "armor"},
+    "iron_armor": {"def_bonus": 8, "hp_bonus": 50, "type": "armor"},
+}
+
+
+def get_effective_stats(state):
+    """Calculate combat stats including equipment bonuses from inventory."""
+    stats = {"atk": state.atk, "defense": state.defense, "max_hp": state.max_hp, "hp": state.hp}
+    for item_name, count in state.inventory.items():
+        if count <= 0:
+            continue
+        bonuses = ITEM_COMBAT_STATS.get(item_name, {})
+        stats["atk"] += bonuses.get("atk_bonus", 0)
+        stats["defense"] += bonuses.get("def_bonus", 0)
+        stats["max_hp"] += bonuses.get("hp_bonus", 0)
+    stats["atk"] = max(1, stats["atk"])
+    stats["defense"] = max(0, stats["defense"])
+    return stats
+
+
+def advance_kill_quests(state, enemy_name):
+    """Check and advance kill/defeat-based quests. Returns list of completed quest names."""
+    completed = []
+    quest_state = getattr(state, 'quest_state', None)
+    if not quest_state:
+        return completed
+    side_active = quest_state.get("side_active", [])
+    for quest_id in list(side_active):
+        try:
+            from wuxia_quests import SIDE_QUESTS
+            quest = next((q for q in SIDE_QUESTS if q["id"] == quest_id), None)
+            if not quest:
+                continue
+            for obj in quest.get("objectives", []):
+                if obj.get("type") == "defeat":
+                    target = obj.get("target", "")
+                    if target and (target in enemy_name or enemy_name in target):
+                        progress = quest_state.get("quest_progress", {})
+                        progress[quest_id] = progress.get(quest_id, 0) + 1
+                        quest_state["quest_progress"] = progress
+                        if progress[quest_id] >= obj.get("count", 1):
+                            _grant_quest_rewards(state, quest)
+                            side_active.remove(quest_id)
+                            quest_state["side_completed"] = quest_state.get("side_completed", [])
+                            quest_state["side_completed"].append(quest_id)
+                            completed.append(quest["name"])
+        except ImportError:
+            pass
+    return completed
+
+
+def _grant_quest_rewards(state, quest):
+    """Apply quest rewards to player state."""
+    rewards = quest.get("rewards", {})
+    if "xp" in rewards:
+        state.cultivation += rewards["xp"]
+    if "silver" in rewards:
+        state.silver += rewards["silver"]
+    if "gold" in rewards:
+        state.gold += rewards["gold"]
+
+
+
 
 class CombatState:
     def __init__(self):
@@ -98,10 +167,11 @@ def start_combat(state, enemy_name=None, enemy_template=None):
     cs = CombatState()
     cs.in_combat = True
     cs.round = 1
-    cs.player_hp = state.hp
-    cs.player_max_hp = state.max_hp
-    cs.player_atk = state.atk
-    cs.player_def = state.defense
+    eff = get_effective_stats(state)
+    cs.player_hp = eff["hp"]
+    cs.player_max_hp = eff["max_hp"]
+    cs.player_atk = eff["atk"]
+    cs.player_def = eff["defense"]
     cs.player_skills = list(state.skills.keys())
 
     if enemy_template:
@@ -260,6 +330,13 @@ def check_combat_end(cs, state):
         cs.rewards = {"xp": xp_gain, "silver": silver_gain}
         state.cultivation += xp_gain
         state.silver += silver_gain
+
+        # Kill-quest tracking
+        completed_quests = advance_kill_quests(state, cs.enemy_name)
+        if completed_quests:
+            for qname in completed_quests:
+                cs.log.append(f"任务完成：【{qname}】")
+
         cs.log.append(f"胜利！获得 {xp_gain} 武学修为，{silver_gain} 银两。")
         state.combat_state = None
     elif cs.player_hp <= 0 and cs.result is None:

@@ -438,6 +438,13 @@ class WorldEngine:
         if self.state.tick_count % 4 == 0:
             self.state.save()
 
+        # Advance NPC minds (decay transient thoughts)
+        try:
+            from wuxia_npc_memory import get_archive
+            get_archive().advance_tick()
+        except ImportError:
+            pass
+
         return self.get_time_display(), events
 
     def _update_npcs(self):
@@ -741,6 +748,7 @@ class WorldEngine:
             return {"ok": False, "msg": f"{npc_name} 不在 {self.state.location}，目前似乎在 {npc['location']}。"}
 
         # Try AI dialogue for major NPCs
+        archive.get_or_create_mind(npc_name, npc["personality"])
         ai_result = generate_npc_dialogue(npc_name)
         if ai_result and ai_result.get("type") == "ai_generated":
             dialogue = ai_result["dialogue"]
@@ -754,6 +762,7 @@ class WorldEngine:
                     "dialogue_type": "ai"}
 
         # Fallback to static dialogue
+        archive.get_or_create_mind(npc_name, npc["personality"])
         dialogue = random.choice(npc["dialogues"])
         archive.record_interaction(npc_name, dialogue)
         self.state.relationship[npc_name] = self.state.relationship.get(npc_name, 0) + 1
