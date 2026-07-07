@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+*.json
+!*.json.bak
+wuxia_save.json
+wuxia_npc_memory.json
+wuxia_ai_quests.json
+wuxia_config.json
+saves/
+.playwright-mcp/
+reference.jpg
+reference.png
+game_*.png

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>放置江湖 · 武侠传</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap");
+:root { --bg: #1a1210; --panel: #2a1f1a; --panel2: #342820; --gold: #c8a45c; --gold2: #e8d5a3; --red: #8b2020; --red2: #c0392b; --text: #d4c5b0; --text2: #a89580; --border: #4a3525; --hp: #2ecc71; --xp: #f39c12; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: "Noto Serif SC", "SimSun", serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; background-image: radial-gradient(ellipse at 20% 50%, rgba(200,164,92,0.03) 0%, transparent 50%), radial-gradient(ellipse at 80% 50%, rgba(139,32,32,0.03) 0%, transparent 50%); }
+.app { display: grid; grid-template-columns: 260px 1fr 240px; grid-template-rows: 48px 1fr; height: 100vh; gap: 1px; background: var(--border); }
+.header { grid-column: 1 / -1; background: linear-gradient(180deg, #2a1f1a, #1a1210); display: flex; align-items: center; justify-content: center; padding: 0 20px; border-bottom: 2px solid var(--gold); position: relative; }
+.header h1 { font-size: 18px; color: var(--gold); letter-spacing: 8px; text-shadow: 0 0 20px rgba(200,164,92,0.3); }
+.header .sub { position: absolute; right: 20px; font-size: 11px; color: var(--text2); letter-spacing: 2px; }
+.panel { background: var(--panel); overflow-y: auto; }
+.panel-title { padding: 10px 14px; font-size: 13px; color: var(--gold); border-bottom: 1px solid var(--border); letter-spacing: 3px; font-weight: 700; }
+.left { display: flex; flex-direction: column; }
+.status-block { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.status-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; font-size: 13px; }
+.status-label { color: var(--text2); }
+.status-value { color: var(--gold2); font-weight: 700; }
+.status-value.realm { font-size: 15px; }
+.bar-wrap { width: 100%; height: 8px; background: #1a1210; border-radius: 4px; margin-top: 3px; overflow: hidden; border: 1px solid var(--border); }
+.bar { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+.bar.hp { background: linear-gradient(90deg, #1a7a3a, var(--hp)); }
+.bar.xp { background: linear-gradient(90deg, #b8741a, var(--xp)); }
+.skill-item, .inv-item { padding: 4px 14px; font-size: 12px; color: var(--text2); border-bottom: 1px solid rgba(74,53,37,0.3); }
+.skill-item .sk-name, .inv-item .inv-name { color: var(--text); }
+.inv-item .inv-count { color: var(--gold); float: right; }
+.center { display: flex; flex-direction: column; background: #0f0a08; }
+.terminal { flex: 1; overflow-y: auto; padding: 16px 20px; font-size: 14px; line-height: 1.9; scroll-behavior: smooth; }
+.terminal .time-bar { color: var(--gold2); padding-bottom: 8px; margin-bottom: 10px; border-bottom: 1px dashed var(--border); font-size: 13px; letter-spacing: 1px; }
+.terminal .narrator { color: var(--text); padding: 6px 0; animation: fadeIn 0.3s ease; }
+.terminal .event-text { color: #e8d5a3; font-style: italic; }
+.terminal .dialogue { color: #7ec8e3; padding: 4px 0 4px 16px; border-left: 2px solid #4a6a7a; margin: 4px 0; }
+.terminal .system-msg { color: var(--text2); font-size: 12px; padding: 2px 0; }
+.terminal .error-msg { color: var(--red2); padding: 4px 0; }
+.terminal .success-msg { color: var(--hp); padding: 4px 0; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.input-area { display: flex; align-items: center; padding: 10px 16px; background: var(--panel); border-top: 1px solid var(--border); gap: 10px; }
+.input-area .prompt { color: var(--gold); font-size: 16px; font-weight: 700; }
+.input-area input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 14px; font-size: 14px; font-family: inherit; border-radius: 4px; outline: none; transition: border-color 0.2s; }
+.input-area input:focus { border-color: var(--gold); }
+.input-area button { background: var(--red); color: var(--gold2); border: 1px solid var(--gold); padding: 8px 18px; font-family: inherit; font-size: 13px; cursor: pointer; border-radius: 4px; letter-spacing: 2px; transition: all 0.2s; }
+.input-area button:hover { background: var(--red2); }
+.right { display: flex; flex-direction: column; }
+.save-item { padding: 8px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s; font-size: 12px; }
+.save-item:hover { background: var(--panel2); }
+.save-slot { color: var(--gold); font-weight: 700; font-size: 13px; }
+.save-info { color: var(--text2); margin-top: 2px; }
+.save-actions { margin-top: 4px; display: flex; gap: 6px; }
+.save-actions button { background: transparent; border: 1px solid var(--border); color: var(--text2); padding: 2px 8px; font-size: 11px; cursor: pointer; border-radius: 3px; font-family: inherit; }
+.save-actions button:hover { border-color: var(--gold); color: var(--gold); }
+.npc-item { padding: 6px 14px; font-size: 12px; border-bottom: 1px solid rgba(74,53,37,0.3); display: flex; justify-content: space-between; }
+.npc-name { color: var(--text); }
+.npc-role { color: var(--text2); font-size: 11px; }
+.save-form { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; gap: 6px; }
+.save-form input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; font-size: 12px; font-family: inherit; border-radius: 3px; outline: none; }
+.save-form input:focus { border-color: var(--gold); }
+.save-form button { background: var(--red); border: 1px solid var(--gold); color: var(--gold2); padding: 5px 10px; font-size: 11px; cursor: pointer; border-radius: 3px; font-family: inherit; white-space: nowrap; }
+.help-grid { padding: 10px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+.help-item { font-size: 12px; padding: 3px 0; color: var(--text2); }
+.help-cmd { color: var(--gold); }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+</style>
+</head>
+<body>
+<div class="app">
+<div class="header">
+<h1>&#x2694; 放 置 江 湖 &#xB7; 武 侠 传 &#x2694;</h1>
+<div class="sub" id="headerSub">AI 驱 动 的 江 湖 世 界</div>
+</div>
+<div class="panel left">
+<div class="panel-title">&#x25C6; 少侠状态</div>
+<div id="statusPanel"></div>
+<div class="panel-title" style="margin-top:auto;">&#x25C6; 武功</div>
+<div id="skillsPanel"></div>
+<div class="panel-title">&#x25C6; 背包</div>
+<div id="invPanel"></div>
+</div>
+<div class="center">
+<div class="terminal" id="terminal">
+<div class="time-bar" id="timeBar"></div>
+<div id="output"></div>
+</div>
+<div class="input-area">
+<span class="prompt">&#x276F;</span>
+<input type="text" id="cmdInput" placeholder="输入命令... (help 查看帮助)" autocomplete="off" autofocus>
+<button onclick="sendCommand()">行 动</button>
+</div>
+</div>
+<div class="panel right">
+<div class="panel-title">&#x25C6; 记忆存档</div>
+<div class="save-form">
+<input type="text" id="saveName" placeholder="存档名...">
+<button onclick="saveGame()">保存</button>
+</div>
+<div id="savesList"></div>
+<div class="panel-title">&#x25C6; 江湖任务</div><div id="questPanel" style="padding:8px 14px;font-size:12px;color:var(--text2);border-bottom:1px solid var(--border);">{{ quest_html | safe }}</div><div class="panel-title">&#x25C6; 附近人物</div>
+<div id="npcsPanel"></div>
+<div class="panel-title">&#x25C6; 命令帮助</div>
+<div class="help-grid">
+<div class="help-item"><span class="help-cmd">look</span> 观察</div>
+<div class="help-item"><span class="help-cmd">go &lt;地&gt;</span> 前往</div>
+<div class="help-item"><span class="help-cmd">talk &lt;人&gt;</span> 交谈</div>
+<div class="help-item"><span class="help-cmd">practice</span> 练功</div>
+<div class="help-item"><span class="help-cmd">breakthrough</span> 突破</div>
+<div class="help-item"><span class="help-cmd">rest</span> 休息</div>
+<div class="help-item"><span class="help-cmd">combat</span> 战斗</div>
+<div class="help-item"><span class="help-cmd">attack</span> 攻击</div>
+<div class="help-item"><span class="help-cmd">defend</span> 防御</div>
+<div class="help-item"><span class="help-cmd">skill</span> 技能</div>
+<div class="help-item"><span class="help-cmd">use</span> 使用物品</div>
+<div class="help-item"><span class="help-cmd">flee</span> 逃跑</div>
+<div class="help-item"><span class="help-cmd">wait &lt;n&gt;</span> 等待</div>
+<div class="help-item"><span class="help-cmd">status</span> 状态</div>
+<div class="help-item"><span class="help-cmd">map</span> 地图</div>
+      <div class="help-item"><span class="help-cmd">region</span> 区域</div>
+<div class="help-item"><span class="help-cmd">inventory</span> 背包</div>
+<div class="help-item"><span class="help-cmd">quest</span> 任务</div><div class="help-item"><span class="help-cmd">save</span> 快速存</div>
+<div class="help-item"><span class="help-cmd">quit</span> 退出</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+const API = "";
+let busy = false;
+function $(id) { return document.getElementById(id); }
+function renderState(data) {
+  const td = data.time_display;
+  const icons = { dawn:"&#x1F305;", morning:"&#x2600;&#xFE0F;", noon:"&#x1F31E;", afternoon:"&#x1F324;&#xFE0F;", evening:"&#x1F307;", night:"&#x1F319;", midnight:"&#x1F30C;" };
+  const icon = icons[td.period] || "&#x1F550;";
+  $('timeBar').innerHTML = icon + ' ' + td.day + '日 | ' + td.time + ' | ' + td.season + '季 | ' + td.weather;
+  $('headerSub').textContent = td.season + '季 · ' + td.weather + ' · ' + data.location;
+  const realm = data.realm;
+  const hpPct = Math.max(2, data.hp / data.max_hp * 100);
+  const xpPct = Math.min(100, data.cultivation % 100);
+  let html = '<div class="status-block">' +
+    '<div class="status-row"><span class="status-label">境界</span><span class="status-value realm">' + realm.icon + ' ' + realm.name + '</span></div>' +
+    '<div class="status-row"><span class="status-label">生命</span><span class="status-value">' + data.hp + ' / ' + data.max_hp + '</span></div>' +
+    '<div class="bar-wrap"><div class="bar hp" style="width:' + hpPct + '%"></div></div>' +
+    '<div class="status-row" style="margin-top:6px;"><span class="status-label">内力</span><span class="status-value">' + data.cultivation + '</span></div>' +
+    '<div class="bar-wrap"><div class="bar xp" style="width:' + xpPct + '%"></div></div>' +
+    '<div class="status-row" style="margin-top:6px;"><span class="status-label">攻击</span><span class="status-value">' + data.atk + '</span><span class="status-label">防御</span><span class="status-value">' + data.defense + '</span></div>' +
+    '<div class="status-row"><span class="status-label">银两</span><span class="status-value">' + data.silver + ' &#x1F48E;</span></div>' +
+    '<div class="status-row"><span class="status-label">铜钱</span><span class="status-value">' + data.gold + ' &#x1FA99;</span></div>' +
+    '</div>';
+  document.getElementById('statusPanel').innerHTML = html;
+  let skHtml = "";
+  for (const [name, lv] of Object.entries(data.skills)) {
+    skHtml += '<div class="skill-item"><span class="sk-name">' + name + '</span> Lv' + lv + '</div>';
+  }
+  document.getElementById('skillsPanel').innerHTML = skHtml || '<div class="skill-item">无</div>';
+  let invHtml = "";
+  for (const [name, count] of Object.entries(data.inventory)) {
+    invHtml += '<div class="inv-item"><span class="inv-name">' + name + '</span><span class="inv-count">x' + count + '</span></div>';
+  }
+  document.getElementById('invPanel').innerHTML = invHtml || '<div class="inv-item">空空如也</div>';
+  let npcHtml = "";
+  for (const name of data.npcs_here) {
+    const role = (data.npc_states[name] && data.npc_states[name].action) || '';
+    npcHtml += '<div class="npc-item"><span class="npc-name">' + name + '</span><span class="npc-role">' + role + '</span></div>';
+  }
+  document.getElementById('npcsPanel').innerHTML = npcHtml || '<div class="npc-item" style="color:var(--text2)">空无一人</div>';
+}
+function addOutput(html, cls) {
+  const div = document.createElement("div");
+  div.className = cls || "narrator";
+  div.innerHTML = html;
+  document.getElementById('output').appendChild(div);
+  const t = document.getElementById("terminal");
+  t.scrollTop = t.scrollHeight;
+}
+function appendEvents(events) {
+  for (const ev of events) {
+    addOutput('<span class="event-text">&#x26A1; ' + ev.text + '</span>', 'narrator');
+  }
+}
+function sendCommand() {
+  if (busy) return;
+  const input = document.getElementById("cmdInput");
+  const cmd = input.value.trim();
+  if (!cmd) return;
+  input.value = "";
+  busy = true;
+  addOutput('<span style="color:var(--text2)">&#x276F; ' + cmd + '</span>', 'system-msg');
+  fetch("/api/command", {
+    method: "POST",
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({command: cmd})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.output) addOutput(data.output, data.ok ? "narrator" : "error-msg");
+    if (data.events && data.events.length) appendEvents(data.events);
+    if (data.type === "talk" && data.raw && data.raw.npc) {
+      addOutput('<div class="dialogue"><b>' + data.raw.npc + '</b>&#xFF1A;&#x300C;' + data.raw.dialogue + '&#x300D;</div>');
+    }
+    refreshState();
+    loadSaves();
+  })
+  .catch(function(err) { addOutput('&#x8FDE;&#x63A5;&#x5931;&#x8D25;: ' + err, 'error-msg'); })
+  .finally(function() { busy = false; })
+}
+function refreshState() {
+  fetch('/api/state').then(function(r) { return r.json(); }).then(function(data) { renderState(data); });
+}
+function loadSaves() {
+  fetch('/api/saves').then(function(r) { return r.json(); }).then(function(data) {
+    let html = "";
+    for (const s of data.saves) {
+      html += '<div class="save-item"><div class="save-slot">&#x1F4DC; ' + s.slot + '</div>' +
+        '<div class="save-info">' + s.realm + ' &#xB7; ' + s.location + ' &#xB7; &#x7B2C;' + s.game_day + '&#x5929; &#xB7; ' + s.updated + '</div>' +
+        '<div class="save-actions">' +
+          '<button onclick="loadGame(\'' + s.slot + '\')">&#x8BFB;&#x53D6;</button>' +
+          '<button onclick="deleteGame(\'' + s.slot + '\')">&#x5220;&#x9664;</button>' +
+        '</div></div>';
+    }
+    document.getElementById('savesList').innerHTML = html || '<div class="save-item" style="color:var(--text2);cursor:default;">&#x6682;&#x65E0;&#x4FDD;&#x6863;</div>';
+  });
+}
+function saveGame() {
+  const name = document.getElementById("saveName").value.trim();
+  if (!name) return;
+  fetch("/api/save", {
+    method: "POST",
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({slot: name})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      addOutput('<span class="success-msg">&#x1F4BE; ' + data.msg + '</span>', 'system-msg');
+      document.getElementById("saveName").value = "";
+      loadSaves();
+    } else {
+      addOutput('&#x26A0;&#xFE0F; ' + data.msg, 'error-msg');
+    }
+  });
+}
+function loadGame(slot) {
+  if (!confirm('&#x8BFB;&#x53D6;&#x4FDD;&#x6863; ' + slot + ' &#xFF1F;&#x5F53;&#x524D;&#x8FDB;&#x5EA6;&#x5C06;&#x88AB;&#x8986;&#x76D6;&#x3002;')) return;
+  fetch("/api/load", {
+    method: "POST",
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({slot: slot})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      addOutput('<span class="success-msg">&#x1F4D6; ' + data.msg + '</span>', 'system-msg');
+      refreshState();
+      loadSaves();
+      document.getElementById('output').innerHTML = '';
+    } else {
+      addOutput('&#x26A0;&#xFE0F; ' + data.msg, 'error-msg');
+    }
+  });
+}
+function deleteGame(slot) {
+  if (!confirm('&#x5220;&#x9664;&#x4FDD;&#x6863; ' + slot + ' &#xFF1F;')) return;
+  fetch("/api/delete", {
+    method: "POST",
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({slot: slot})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      addOutput('&#x1F5D1; ' + data.msg, 'system-msg');
+      loadSaves();
+    }
+  });
+}
+document.getElementById('cmdInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') sendCommand(); });
+refreshState();
+loadSaves();
+setInterval(function() { refreshState() }, 30000);
+</script>
+</body>
+</html>
