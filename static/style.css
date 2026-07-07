@@ -230,19 +230,45 @@ html, body {
   color: var(--text2);
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 3px;
   position: relative;
+  overflow: hidden;
+}
+
+.地点卡片::after {
+  content: '前往';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, transparent, rgba(200,164,92,0.15));
+  color: var(--gold-dim);
+  font-size: 9px;
+  padding: 2px 0 4px;
+  letter-spacing: 2px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.地点卡片:hover::after {
+  opacity: 1;
 }
 
 .地点卡片:hover {
   border-color: var(--gold-dim);
   color: var(--gold);
   background: var(--btn-hover);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.地点卡片:active {
+  transform: scale(0.96);
+  transition: transform 0.1s;
 }
 
 .地点卡片.当前 {
@@ -276,6 +302,14 @@ html, body {
 
 .地点卡片.当前 .地点状态 {
   color: var(--cyan);
+}
+
+@keyframes 抖动 {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
 }
 
 .地图图例 {
@@ -385,6 +419,56 @@ html, body {
   padding: 24px 28px;
   overflow-y: auto;
   scrollbar-width: thin;
+  transition: opacity 0.3s ease;
+}
+
+.描述区域.移动过渡 {
+  opacity: 0.3;
+}
+
+/* ========== 移动遮罩 ========== */
+.移动遮罩 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 10, 12, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.移动动画 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  color: var(--gold);
+  letter-spacing: 3px;
+}
+
+.移动图标 {
+  font-size: 24px;
+  animation: 行走动画 0.8s ease-in-out infinite;
+}
+
+.移动文本 {
+  animation: 文字闪烁 1.5s ease-in-out infinite;
+}
+
+@keyframes 行走动画 {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(8px); }
+}
+
+@keyframes 文字闪烁 {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 .描述区域::-webkit-scrollbar {
@@ -404,10 +488,11 @@ html, body {
 
 .描述标题 {
   color: var(--gold-bright);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
-  letter-spacing: 3px;
-  margin-bottom: 6px;
+  letter-spacing: 4px;
+  margin-bottom: 8px;
+  text-shadow: 0 0 20px rgba(200,164,92,0.3);
 }
 
 .描述时间 {
@@ -548,18 +633,19 @@ html, body {
   background: var(--btn-bg);
   border: 1px solid var(--btn-border);
   color: var(--text);
-  padding: 10px 18px;
+  padding: 12px 20px;
   font-family: inherit;
   font-size: 13px;
   letter-spacing: 1px;
   border-radius: 4px;
   cursor: pointer;
   flex: 1;
-  min-width: 70px;
+  min-width: 75px;
   text-align: center;
   transition: all 0.15s;
   position: relative;
   overflow: hidden;
+  font-weight: 600;
 }
 
 .操作按钮::before {
@@ -930,8 +1016,8 @@ html, body {
 
 /* ========== 日志面板 ========== */
 .日志区域 {
-  height: 160px;
-  padding: 10px 14px;
+  height: 140px;
+  padding: 8px 16px;
   background: #080808;
   border-top: 1px solid var(--border);
   flex-shrink: 0;

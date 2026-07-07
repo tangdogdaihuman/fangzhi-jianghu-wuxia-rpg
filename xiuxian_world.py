@@ -308,6 +308,7 @@ class GameState:
         self.flags = set()
         self.tick_count = 0
         self.combat_state = None
+        self.visited_locations = {}
 
         # 初始化NPC状态
         for name in NPCS:
@@ -341,6 +342,7 @@ class GameState:
             "flags": list(self.flags),
             "tick_count": self.tick_count,
             "quest_stats": self.quest_stats,
+            "visited_locations": self.visited_locations,
             "combat_state": self.combat_state,
         }
 
@@ -570,6 +572,7 @@ class WorldEngine:
             return {"ok": False, "msg": f"未知地点：{destination}。可去：{'、'.join(LOCATIONS)}"}
         if destination == self.state.location:
             return {"ok": False, "msg": f"你已经在 {destination} 了。"}
+        self.state.visited_locations[destination] = True
         self.state.location = destination
         self.state.save()
         return {"ok": True, "msg": f"你来到了 {destination}。"}

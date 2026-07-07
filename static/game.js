@@ -8,6 +8,8 @@ var 自动滚动 = true;
 var 技能面板展开 = false;
 var 物品面板展开 = false;
 var 已访问地点 = {};
+var 正在移动 = false;
+var 移动计时器 = null;
 
 /* ========== 缓存DOM元素 ========== */
 var 游戏时间元素 = document.getElementById('游戏时间');
@@ -113,9 +115,19 @@ function 刷新状态() {
   });
 }
 /* ========== 更新地点信息 ========== */
+var 上次地点 = '';
 function 更新地点信息(数据) {
   var loc = 数据.地点 || '未知之地';
-  if (描述标题元素) 描述标题元素.textContent = '【' + loc + '】';
+  var 地点变更 = (loc !== 上次地点 && 上次地点 !== '');
+  上次地点 = loc;
+  if (描述标题元素) {
+    if (地点变更) {
+      描述标题元素.style.animation = 'none';
+      描述标题元素.offsetHeight; // trigger reflow
+      描述标题元素.style.animation = '地点高亮 0.8s ease-out';
+    }
+    描述标题元素.textContent = '【' + loc + '】';
+  }
 
   var 时间显示 = 数据.时间显示 || {};
   var 时段 = 时间显示.time || '';
@@ -123,7 +135,16 @@ function 更新地点信息(数据) {
   if (描述时间元素) 描述时间元素.textContent = 时段;
   if (描述天气元素) 描述天气元素.textContent = 天气;
 
-  if (描述文本元素) {
+  if (地点变更 && 描述文本元素) {
+    描述文本元素.style.opacity = '0';
+    描述文本元素.style.transform = 'translateY(8px)';
+    setTimeout(function() {
+      描述文本元素.textContent = 获取地点描述(loc);
+      描述文本元素.style.transition = 'all 0.4s ease';
+      描述文本元素.style.opacity = '1';
+      描述文本元素.style.transform = 'translateY(0)';
+    }, 200);
+  } else if (描述文本元素) {
     描述文本元素.textContent = 获取地点描述(loc);
   }
   if (描述介绍元素) {
@@ -168,12 +189,13 @@ function 更新出口面板(数据) {
     return;
   }
 
+  var 方向标签 = {'上': '北', '下': '南', '左': '西', '右': '东'};
   var html = '';
   // 上行
   html += '<div class="出口行">';
   html += '<div class="出口占位"></div>';
   if (连接.上) {
-    html += '<div class="出口按钮 可用" onclick="前往地点(\'' + 连接.上 + '\')">▲ ' + 连接.上 + '</div>';
+    html += '<div class="出口按钮 可用" onclick="前往地点(\'' + 连接.上 + '\')">▲ ' + 方向标签['上'] + ' ' + 连接.上 + '</div>';
   } else {
     html += '<div class="出口占位"></div>';
   }
@@ -182,13 +204,13 @@ function 更新出口面板(数据) {
   // 中行
   html += '<div class="出口行">';
   if (连接.左) {
-    html += '<div class="出口按钮 可用" onclick="前往地点(\'' + 连接.左 + '\')">◀ ' + 连接.左 + '</div>';
+    html += '<div class="出口按钮 可用" onclick="前往地点(\'' + 连接.左 + '\')">◀ ' + 方向标签['左'] + ' ' + 连接.左 + '</div>';
   } else {
     html += '<div class="出口占位"></div>';
   }
   html += '<div class="出口按钮 当前">◇ ' + (数据.地点 || '???') + '</div>';
   if (连接.右) {
-    html += '<div class="出口按钮 可用" onclick="前往地点(\'' + 连接.右 + '\')">' + 连接.右 + ' ▶</div>';
+    html += '<div class="出口按钮 可用" onclick="前往地点(\'' + 连接.右 + '\')">' + 连接.右 + ' ' + 方向标签['右'] + ' ▶</div>';
   } else {
     html += '<div class="出口占位"></div>';
   }
@@ -197,7 +219,7 @@ function 更新出口面板(数据) {
   html += '<div class="出口行">';
   html += '<div class="出口占位"></div>';
   if (连接.下) {
-    html += '<div class="出口按钮 可用" onclick="前往地点(\'' + 连接.下 + '\')">▼ ' + 连接.下 + '</div>';
+    html += '<div class="出口按钮 可用" onclick="前往地点(\'' + 连接.下 + '\')">▼ ' + 方向标签['下'] + ' ' + 连接.下 + '</div>';
   } else {
     html += '<div class="出口占位"></div>';
   }
@@ -458,7 +480,7 @@ function 发送战斗请求(动作, 额外) {
 /* ========== 命令执行 ========== */
 function 执行操作(命令) {
   添加日志('❯ ' + 命令, '系统');
-  发送命令(命令);
+  return 发送命令(命令);
 }
 
 function 执行命令() {
@@ -471,7 +493,7 @@ function 执行命令() {
 }
 
 function 发送命令(命令) {
-  请求数据('/api/命令', 'POST', {命令: 命令}).then(function(数据) {
+  return 请求数据('/api/命令', 'POST', {命令: 命令}).then(function(数据) {
     if (数据.输出) 添加日志(数据.输出, 数据.类型 || '');
     if (数据.事件 && 数据.事件.length) {
       for (var i = 0; i < 数据.事件.length; i++) {
@@ -487,9 +509,51 @@ function 发送命令(命令) {
 
 /* ========== 导航系统 ========== */
 function 前往地点(目标) {
-  if (目标 === 游戏状态.地点) return;
-  添加日志('前往「' + 目标 + '」...', '系统');
-  发送命令('前往 ' + 目标);
+  if (目标 === 游戏状态.地点) {
+    // 已经在当前位置 — 抖动反馈
+    var 卡片 = 地图网格元素 ? 地图网格元素.querySelectorAll('.地点卡片') : [];
+    for (var i = 0; i < 卡片.length; i++) {
+      var 名称元素 = 卡片[i].querySelector('.地点名称');
+      if (名称元素 && 名称元素.textContent === 目标) {
+        卡片[i].style.animation = 'none';
+        卡片[i].offsetHeight;
+        卡片[i].style.animation = '抖动 0.4s ease';
+      }
+    }
+    return;
+  }
+  if (正在移动) return;
+  正在移动 = true;
+  显示移动遮罩(目标);
+  添加日志('🚶 赶路前往「' + 目标 + '」...', '系统');
+  发送命令('前往 ' + 目标).then(function() {
+    setTimeout(function() { 隐藏移动遮罩(); }, 600);
+  }).catch(function() {
+    隐藏移动遮罩();
+    添加日志('赶路失败，请重试', '系统');
+  });
+}
+
+function 显示移动遮罩(目标) {
+  // 描述区域添加赶路状态
+  var 描述区域 = document.querySelector('.描述区域');
+  if (描述区域) {
+    描述区域.style.position = 'relative';
+    var 遮罩 = document.createElement('div');
+    遮罩.id = '移动遮罩';
+    遮罩.className = '移动遮罩';
+    遮罩.innerHTML = '<div class="移动动画"><span class="移动图标">🚶</span><span class="移动文本">赶路中...</span></div>';
+    描述区域.appendChild(遮罩);
+  }
+}
+
+function 隐藏移动遮罩() {
+  正在移动 = false;
+  var 遮罩 = document.getElementById('移动遮罩');
+  if (遮罩) {
+    遮罩.style.opacity = '0';
+    setTimeout(function() { if (遮罩.parentElement) 遮罩.remove(); }, 300);
+  }
 }
 
 function 与人物交谈(名字) {
@@ -508,13 +572,27 @@ function 更新地图网格() {
     var 是否当前 = (loc === 游戏状态.地点);
     var 是否访问 = 已访问地点[loc] || (游戏状态.已访问地点 && 游戏状态.已访问地点[loc]);
     var cls = '地点卡片' + (是否当前 ? ' 当前' : (是否访问 ? ' 已访问' : ''));
-    html += '<div class="' + cls + '" onclick="前往地点(\'' + loc + '\')">';
+    html += '<div class="' + cls + '" onclick="点击地点(\'' + loc + '\', this)">';
     html += '<div class="地点图标">' + 地点图标[loc] + '</div>';
     html += '<div class="地点名称">' + loc + '</div>';
     html += '<div class="地点状态">' + (是否当前 ? '当前位置' : (是否访问 ? '已访问' : '未探索')) + '</div>';
     html += '</div>';
   }
   地图网格元素.innerHTML = html;
+}
+
+function 点击地点(目标, 元素) {
+  if (目标 === 游戏状态.地点) {
+    // 已经在当前位置 — 显示抖动反馈
+    if (元素) {
+      元素.style.animation = 'none';
+      元素.offsetHeight;
+      元素.style.animation = '抖动 0.4s ease';
+    }
+    return;
+  }
+  if (正在移动) return;
+  前往地点(目标);
 }
 
 /* ========== 访问记录 ========== */
