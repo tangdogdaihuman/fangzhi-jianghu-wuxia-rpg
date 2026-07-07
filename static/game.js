@@ -510,84 +510,187 @@ function 发送命令(命令) {
 /* ========== 导航系统 ========== */
 function 前往地点(目标) {
   if (目标 === 游戏状态.地点) {
-    // 已经在当前位置 — 抖动反馈
-    var 卡片 = 地图网格元素 ? 地图网格元素.querySelectorAll('.地点卡片') : [];
-    for (var i = 0; i < 卡片.length; i++) {
-      var 名称元素 = 卡片[i].querySelector('.地点名称');
+    var 节点 = 地图网格元素 ? 地图网格元素.querySelectorAll('.地图节点') : [];
+    for (var i = 0; i < 节点.length; i++) {
+      var 名称元素 = 节点[i].querySelector('.节点名称');
       if (名称元素 && 名称元素.textContent === 目标) {
-        卡片[i].style.animation = 'none';
-        卡片[i].offsetHeight;
-        卡片[i].style.animation = '抖动 0.4s ease';
+        节点[i].style.animation = 'none';
+        节点[i].offsetHeight;
+        节点[i].style.animation = '节点抖动 0.4s ease';
       }
     }
     return;
   }
   if (正在移动) return;
   正在移动 = true;
-  显示移动遮罩(目标);
+
+  // 获取起点和终点坐标
+  var 起点坐标 = 地点坐标[游戏状态.地点];
+  var 终点坐标 = 地点坐标[目标];
+  if (!起点坐标 || !终点坐标) {
+    正在移动 = false;
+    return;
+  }
+
+  // 添加日志
   添加日志('🚶 赶路前往「' + 目标 + '」...', '系统');
-  发送命令('前往 ' + 目标).then(function() {
-    setTimeout(function() { 隐藏移动遮罩(); }, 600);
-  }).catch(function() {
-    隐藏移动遮罩();
-    添加日志('赶路失败，请重试', '系统');
+
+  // 动画移动角色
+  移动角色到(起点坐标, 终点坐标, function() {
+    // 移动完成后发送命令
+    发送命令('前往 ' + 目标).then(function() {
+      更新地图网格(); // 重新渲染地图
+      setTimeout(function() { 正在移动 = false; }, 300);
+    }).catch(function() {
+      正在移动 = false;
+      更新地图网格();
+      添加日志('赶路失败，请重试', '系统');
+    });
   });
 }
 
-function 显示移动遮罩(目标) {
-  // 描述区域添加赶路状态
-  var 描述区域 = document.querySelector('.描述区域');
-  if (描述区域) {
-    描述区域.style.position = 'relative';
-    var 遮罩 = document.createElement('div');
-    遮罩.id = '移动遮罩';
-    遮罩.className = '移动遮罩';
-    遮罩.innerHTML = '<div class="移动动画"><span class="移动图标">🚶</span><span class="移动文本">赶路中...</span></div>';
-    描述区域.appendChild(遮罩);
+function 移动角色到(起点, 终点, callback) {
+  var 角色 = document.getElementById('玩家角色');
+  if (!角色) {
+    if (callback) callback();
+    return;
   }
+
+  // 计算路径（使用 SVG path 数据）
+  var 路径点 = 计算地图路径(起点, 终点);
+  var 总时长 = 800; // 动画时长 ms
+  var 间隔 = 30; // 每帧间隔
+  var 总帧数 = Math.ceil(总时长 / 间隔);
+  var 当前帧 = 0;
+
+  function 动画帧() {
+    当前帧++;
+    var 进度 = 当前帧 / 总帧数;
+
+    if (进度 >= 1) {
+      // 动画完成，移动到终点
+      角色.style.left = 终点.x + '%';
+      角色.style.top = 终点.y + '%';
+      角色.style.transition = 'none';
+      if (callback) callback();
+      return;
+    }
+
+    // 沿路径插值
+    var 位置 = 沿路径插值(路径点, 进度);
+    角色.style.left = 位置.x + '%';
+    角色.style.top = 位置.y + '%';
+
+    setTimeout(动画帧, 间隔);
+  }
+
+  // 开始动画
+  角色.style.transition = 'none';
+  setTimeout(动画帧, 50);
 }
 
-function 隐藏移动遮罩() {
-  正在移动 = false;
-  var 遮罩 = document.getElementById('移动遮罩');
-  if (遮罩) {
-    遮罩.style.opacity = '0';
-    setTimeout(function() { if (遮罩.parentElement) 遮罩.remove(); }, 300);
-  }
+function 计算地图路径(起点, 终点) {
+  // 简化路径：直接直线移动（后续可改为沿道路移动）
+  return [起点, 终点];
+}
+
+function 沿路径插值(路径点, 进度) {
+  if (路径点.length === 1) return 路径点[0];
+
+  var 总段数 = 路径点.length - 1;
+  var 当前段 = Math.min(Math.floor(进度 * 总段数), 总段数 - 1);
+  var 段进度 = (进度 * 总段数) - 当前段;
+
+  var p1 = 路径点[当前段];
+  var p2 = 路径点[当前段 + 1];
+
+  return {
+    x: p1.x + (p2.x - p1.x) * 段进度,
+    y: p1.y + (p2.y - p1.y) * 段进度
+  };
 }
 
 function 与人物交谈(名字) {
   添加日志('与「' + 名字 + '」交谈...', '系统');
-  发送命令('与 ' + 名字 + ' 交谈');
+  发送命令('交谈 ' + 名字);
 }
 
 /* ========== 地图网格 ========== */
+// 地点坐标（百分比定位，模拟江湖地图布局）
+var 地点坐标 = {
+  '平安镇':   {x: 25, y: 55},
+  '龙门客栈': {x: 45, y: 40},
+  '黑风寨':   {x: 15, y: 35},
+  '温泉谷':   {x: 35, y: 20},
+  '襄阳城':   {x: 70, y: 45},
+  '武林秘籍库': {x: 55, y: 15},
+  '回春堂':   {x: 30, y: 75},
+  '擂台':     {x: 65, y: 70}
+};
+
+// 连接关系（道路网络）
+var 地图连接 = {
+  '平安镇':   ['龙门客栈', '黑风寨', '温泉谷', '回春堂'],
+  '龙门客栈': ['平安镇', '黑风寨', '襄阳城', '武林秘籍库'],
+  '黑风寨':   ['平安镇', '龙门客栈', '温泉谷'],
+  '温泉谷':   ['平安镇', '黑风寨', '武林秘籍库'],
+  '襄阳城':   ['龙门客栈', '擂台', '回春堂'],
+  '武林秘籍库': ['龙门客栈', '温泉谷', '擂台'],
+  '回春堂':   ['平安镇', '襄阳城', '黑风寨'],
+  '擂台':     ['襄阳城', '武林秘籍库']
+};
+
 function 更新地图网格() {
   if (!游戏状态 || !地图网格元素) return;
   var 地点图标 = {'平安镇': '🏘', '龙门客栈': '🏮', '黑风寨': '🏔', '温泉谷': '♨', '襄阳城': '🏯', '武林秘籍库': '📚', '回春堂': '🏥', '擂台': '⚔'};
-  var 地点列表 = Object.keys(地点图标);
-  var html = '';
-  for (var i = 0; i < 地点列表.length; i++) {
-    var loc = 地点列表[i];
-    var 是否当前 = (loc === 游戏状态.地点);
-    var 是否访问 = 已访问地点[loc] || (游戏状态.已访问地点 && 游戏状态.已访问地点[loc]);
-    var cls = '地点卡片' + (是否当前 ? ' 当前' : (是否访问 ? ' 已访问' : ''));
-    html += '<div class="' + cls + '" onclick="点击地点(\'' + loc + '\', this)">';
-    html += '<div class="地点图标">' + 地点图标[loc] + '</div>';
-    html += '<div class="地点名称">' + loc + '</div>';
-    html += '<div class="地点状态">' + (是否当前 ? '当前位置' : (是否访问 ? '已访问' : '未探索')) + '</div>';
+
+  // 构建 SVG 地图
+  var html = '<div class="地图画布">';
+
+  // SVG 层：绘制道路
+  html += '<svg class="地图路径" viewBox="0 0 100 100" preserveAspectRatio="none">';
+  地图连接.forEach(function(目标, 起点) {
+    var 坐标起点 = 地点坐标[起点];
+    var 坐标终点 = 地点坐标[目标];
+    if (坐标起点 && 坐标终点) {
+      var 已访问 = 已访问地点[起点] && 已访问地点[目标];
+      html += '<path class="地图道路' + (已访问 ? ' 已探索' : '') + '" d="M ' + 坐标起点.x + ' ' + 坐标起点.y + ' L ' + 坐标终点.x + ' ' + 坐标终点.y + '"/>';
+    }
+  });
+  html += '</svg>';
+
+  // 地点节点层
+  Object.keys(地点坐标).forEach(function(地点名) {
+    var 坐标 = 地点坐标[地点名];
+    var 是否当前 = (地点名 === 游戏状态.地点);
+    var 是否访问 = 已访问地点[地点名] || (游戏状态.已访问地点 && 游戏状态.已访问地点[地点名]);
+    var cls = '地图节点' + (是否当前 ? ' 当前' : (是否访问 ? ' 已访问' : ''));
+    html += '<div class="' + cls + '" style="left:' + 坐标.x + '%;top:' + 坐标.y + '%" onclick="点击地图节点(\'' + 地点名 + '\', this)">';
+    html += '<div class="节点图标">' + (地点图标[地点名] || '📍') + '</div>';
+    html += '<div class="节点名称">' + 地点名 + '</div>';
+    html += '<div class="节点状态">' + (是否当前 ? '当前位置' : (是否访问 ? '已访问' : '未探索')) + '</div>';
+    html += '</div>';
+  });
+
+  // 玩家角色（最后一个渲染，确保在最上层）
+  if (游戏状态.地点 && 地点坐标[游戏状态.地点]) {
+    var 玩家坐标 = 地点坐标[游戏状态.地点];
+    html += '<div class="玩家角色" id="玩家角色" style="left:' + 玩家坐标.x + '%;top:' + 玩家坐标.y + '%">';
+    html += '<div class="角色动画">🗡</div>';
     html += '</div>';
   }
+
+  html += '</div>';
   地图网格元素.innerHTML = html;
 }
 
-function 点击地点(目标, 元素) {
+function 点击地图节点(目标, 元素) {
   if (目标 === 游戏状态.地点) {
-    // 已经在当前位置 — 显示抖动反馈
+    // 已经在当前位置 — 抖动反馈
     if (元素) {
       元素.style.animation = 'none';
       元素.offsetHeight;
-      元素.style.animation = '抖动 0.4s ease';
+      元素.style.animation = '节点抖动 0.4s ease';
     }
     return;
   }
@@ -701,19 +804,41 @@ function 隐藏任务弹窗() {
 function 打开地图弹窗() {
   if (!游戏状态) return;
   var 地点图标 = {'平安镇': '🏘', '龙门客栈': '🏮', '黑风寨': '🏔', '温泉谷': '♨', '襄阳城': '🏯', '武林秘籍库': '📚', '回春堂': '🏥', '擂台': '⚔'};
-  var 地点列表 = Object.keys(地点图标);
-  var html = '<div class="地图网格">';
-  for (var i = 0; i < 地点列表.length; i++) {
-    var loc = 地点列表[i];
-    var 是否当前 = (loc === 游戏状态.地点);
-    var 是否访问 = 已访问地点[loc] || (游戏状态.已访问地点 && 游戏状态.已访问地点[loc]);
-    var cls = '地点卡片' + (是否当前 ? ' 当前' : (是否访问 ? ' 已访问' : ''));
-    html += '<div class="' + cls + '" onclick="前往地点(\'' + loc + '\')">';
-    html += '<div class="地点图标">' + 地点图标[loc] + '</div>';
-    html += '<div class="地点名称">' + loc + '</div>';
-    html += '<div class="地点状态">' + (是否当前 ? '◇ 当前位置' : (是否访问 ? '已访问' : '未探索')) + '</div>';
+  var html = '<div class="地图画布">';
+
+  // SVG 路径层
+  html += '<svg class="地图路径" viewBox="0 0 100 100" preserveAspectRatio="none">';
+  地图连接.forEach(function(目标, 起点) {
+    var 坐标起点 = 地点坐标[起点];
+    var 坐标终点 = 地点坐标[目标];
+    if (坐标起点 && 坐标终点) {
+      var 已访问 = 已访问地点[起点] && 已访问地点[目标];
+      html += '<path class="地图道路' + (已访问 ? ' 已探索' : '') + '" d="M ' + 坐标起点.x + ' ' + 坐标起点.y + ' L ' + 坐标终点.x + ' ' + 坐标终点.y + '"/>';
+    }
+  });
+  html += '</svg>';
+
+  // 地点节点
+  Object.keys(地点坐标).forEach(function(地点名) {
+    var 坐标 = 地点坐标[地点名];
+    var 是否当前 = (地点名 === 游戏状态.地点);
+    var 是否访问 = 已访问地点[地点名] || (游戏状态.已访问地点 && 游戏状态.已访问地点[地点名]);
+    var cls = '地图节点' + (是否当前 ? ' 当前' : (是否访问 ? ' 已访问' : ''));
+    html += '<div class="' + cls + '" style="left:' + 坐标.x + '%;top:' + 坐标.y + '%" onclick="点击地图节点(\'' + 地点名 + '\', this)">';
+    html += '<div class="节点图标">' + (地点图标[地点名] || '📍') + '</div>';
+    html += '<div class="节点名称">' + 地点名 + '</div>';
+    html += '<div class="节点状态">' + (是否当前 ? '当前位置' : (是否访问 ? '已访问' : '未探索')) + '</div>';
+    html += '</div>';
+  });
+
+  // 玩家角色
+  if (游戏状态.地点 && 地点坐标[游戏状态.地点]) {
+    var 玩家坐标 = 地点坐标[游戏状态.地点];
+    html += '<div class="玩家角色" style="left:' + 玩家坐标.x + '%;top:' + 玩家坐标.y + '%">';
+    html += '<div class="角色动画">🗡</div>';
     html += '</div>';
   }
+
   html += '</div>';
   var 地图主体 = document.getElementById('地图主体');
   if (地图主体) 地图主体.innerHTML = html;

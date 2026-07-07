@@ -115,13 +115,6 @@ html, body {
   border-color: var(--danger);
 }
 
-.地点名称 {
-  color: var(--gold-bright);
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 4px;
-  text-shadow: 0 0 12px rgba(200,164,92,0.3);
-}
 
 .游戏时间 {
   color: var(--text2);
@@ -181,6 +174,164 @@ html, body {
   flex-shrink: 0;
 }
 
+/* ========== 地图画布 ========== */
+.地图容器 {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  position: relative;
+}
+
+.地图容器::-webkit-scrollbar {
+  width: 3px;
+}
+
+.地图容器::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.地图画布 {
+  position: relative;
+  width: 100%;
+  padding-bottom: 100%; /* 1:1 aspect ratio */
+  background: radial-gradient(circle at center, rgba(200,164,92,0.03) 0%, transparent 70%);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.地图路径 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.地图道路 {
+  stroke: var(--border-light);
+  stroke-width: 0.3;
+  fill: none;
+  opacity: 0.5;
+}
+
+.地图道路.已探索 {
+  stroke: var(--gold-dim);
+  opacity: 0.6;
+}
+
+/* ========== 地图节点 ========== */
+.地图节点 {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 2;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.地图节点:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.地图节点:active {
+  transform: translate(-50%, -50%) scale(0.95);
+}
+
+.节点图标 {
+  font-size: 18px;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.节点名称 {
+  font-size: 10px;
+  letter-spacing: 1px;
+  font-weight: 600;
+  color: var(--text2);
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+.节点状态 {
+  font-size: 8px;
+  color: var(--text3);
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.地图节点.当前 {
+  z-index: 3;
+}
+
+.地图节点.当前 .节点图标 {
+  animation: 当前节点脉冲 2s ease-in-out infinite;
+}
+
+.地图节点.当前 .节点名称 {
+  color: var(--cyan);
+  font-weight: 700;
+}
+
+.地图节点.当前 .节点状态 {
+  color: var(--cyan);
+}
+
+.地图节点.已访问 .节点名称 {
+  color: var(--text);
+}
+
+.地图节点.已访问 .节点图标 {
+  opacity: 0.8;
+}
+
+@keyframes 当前节点脉冲 {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px rgba(78,205,196,0.4));
+  }
+  50% {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 8px rgba(78,205,196,0.6));
+  }
+}
+
+@keyframes 节点抖动 {
+  0%, 100% { transform: translate(-50%, -50%) translateX(0); }
+  20% { transform: translate(-50%, -50%) translateX(-3px); }
+  40% { transform: translate(-50%, -50%) translateX(3px); }
+  60% { transform: translate(-50%, -50%) translateX(-2px); }
+  80% { transform: translate(-50%, -50%) translateX(2px); }
+}
+
+/* ========== 玩家角色 ========== */
+.玩家角色 {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+  transition: left 0.05s linear, top 0.05s linear;
+}
+
+.角色动画 {
+  font-size: 20px;
+  animation: 角色弹跳 1s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px rgba(200,164,92,0.6));
+}
+
+@keyframes 角色弹跳 {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
 .面板头部 {
   padding: 10px 14px;
   background: linear-gradient(180deg, #1a1a1e, #121214);
@@ -221,95 +372,72 @@ html, body {
   gap: 6px;
 }
 
-.地点卡片 {
+/* ========== 地图节点 ========== */
+.地图节点 {
   background: var(--btn-bg);
   border: 1px solid var(--btn-border);
-  padding: 10px 6px;
+  padding: 4px 6px;
   text-align: center;
   font-size: 11px;
   color: var(--text2);
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  position: relative;
-  overflow: hidden;
+  gap: 2px;
 }
 
-.地点卡片::after {
-  content: '前往';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(180deg, transparent, rgba(200,164,92,0.15));
-  color: var(--gold-dim);
-  font-size: 9px;
-  padding: 2px 0 4px;
-  letter-spacing: 2px;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.地点卡片:hover::after {
-  opacity: 1;
-}
-
-.地点卡片:hover {
+.地图节点:hover {
   border-color: var(--gold-dim);
   color: var(--gold);
   background: var(--btn-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
-.地点卡片:active {
-  transform: scale(0.96);
-  transition: transform 0.1s;
+.地图节点:active {
+  transform: translate(-50%, -50%) scale(0.9);
 }
 
-.地点卡片.当前 {
+.地图节点.当前 {
   border-color: var(--cyan);
   color: var(--cyan);
   background: rgba(78,205,196,0.08);
-  box-shadow: 0 0 12px rgba(78,205,196,0.2), inset 0 0 12px rgba(78,205,196,0.05);
+  box-shadow: 0 0 12px rgba(78,205,196,0.3);
 }
 
-.地点卡片.已访问 {
+.地图节点.已访问 {
   border-color: var(--border-light);
   color: var(--text);
 }
 
-.地点图标 {
-  font-size: 20px;
+.节点图标 {
+  font-size: 18px;
   line-height: 1;
 }
 
-.地点名称 {
-  font-size: 11px;
+.节点名称 {
+  font-size: 10px;
   letter-spacing: 1px;
   font-weight: 600;
 }
 
-.地点状态 {
-  font-size: 9px;
+.节点状态 {
+  font-size: 8px;
   color: var(--text3);
   letter-spacing: 1px;
 }
 
-.地点卡片.当前 .地点状态 {
+.地图节点.当前 .节点状态 {
   color: var(--cyan);
 }
 
-@keyframes 抖动 {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-4px); }
-  40% { transform: translateX(4px); }
-  60% { transform: translateX(-3px); }
-  80% { transform: translateX(2px); }
+@keyframes 节点抖动 {
+  0%, 100% { transform: translate(-50%, -50%) translateX(0); }
+  20% { transform: translate(-50%, -50%) translateX(-3px); }
+  40% { transform: translate(-50%, -50%) translateX(3px); }
+  60% { transform: translate(-50%, -50%) translateX(-2px); }
+  80% { transform: translate(-50%, -50%) translateX(2px); }
 }
 
 .地图图例 {
